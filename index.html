@@ -33,17 +33,18 @@ html,body{margin:0;height:100%;background:#05070d;color:#cfe8ff;font:14px/1.35 s
 #cargo{font-size:12px;color:#9fb6d0;margin-top:5px;white-space:nowrap}
 #menu{position:fixed;right:10px;top:calc(env(safe-area-inset-top) + 128px);display:flex;gap:6px}
 .sm{min-width:56px;padding:8px 10px;font-size:12px;border-radius:8px}
-#acts{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);display:grid;grid-template-columns:repeat(2,70px);gap:10px}
+#acts{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);display:grid;grid-template-columns:repeat(3,62px);gap:8px}
 button{background:#0f2034e6;color:#cfe8ff;border:1px solid #2a4a6e;border-radius:12px;padding:10px 12px;font:700 13px system-ui;cursor:pointer;touch-action:manipulation}
 button:active{transform:scale(.96)}
 button:disabled{opacity:.35}
-.act{width:70px;height:70px;border-radius:50%;font-size:12px;letter-spacing:.06em;padding:0}
+.act{width:62px;height:62px;border-radius:50%;font-size:11px;letter-spacing:.05em;padding:0;line-height:1.1}
+.act small{display:block;font-size:10px;color:#7d97b5;font-weight:600}
 .act.on{background:#1d5a8f;border-color:#3ea6ff;box-shadow:0 0 14px #3ea6ff88}
 .act.fire.on{background:#7a2a2a;border-color:#ff6b6b;box-shadow:0 0 14px #ff6b6b88}
 .act.mine.on{background:#1b6b5f;border-color:#7fffd4;box-shadow:0 0 14px #7fffd488}
 .act.stop{border-color:#5a4a2a;color:#ffd9a0}
 .hide{display:none!important}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 96px);background:#0f2034ee;border:1px solid #2a4a6e;padding:7px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 4px 18px #000a}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 218px);background:#0f2034ee;border:1px solid #2a4a6e;padding:7px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 4px 18px #000a}
 #toast.show{opacity:1}
 #flash{position:fixed;inset:0;background:#dff3ff;opacity:0;pointer-events:none;transition:opacity .4s}
 #panel{position:fixed;inset:0;background:#05070ef7;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 12px)}
@@ -81,7 +82,6 @@ details.hist summary{cursor:pointer;color:#9ee6ff;font-size:13px}
 .stat b{font-variant-numeric:tabular-nums}
 .ore{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #101c2e}
 .ovalue{font-variant-numeric:tabular-nums;color:#ffd166;font-weight:700}
-.ore.krysite .ovalue{color:#7fffd4}
 .up{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #101c2e}
 .pips{display:flex;gap:4px;margin-top:5px}
 .pips i{width:18px;height:6px;border-radius:3px;background:#14283f;border:1px solid #1d3350}
@@ -113,7 +113,9 @@ details.hist summary{cursor:pointer;color:#9ee6ff;font-size:13px}
 
 <div id="acts">
   <button id="bFire" class="act fire">FIRE</button>
+  <button id="bMiss" class="act">MISSILE<small>0</small></button>
   <button id="bMine" class="act mine">MINE</button>
+  <button id="bDrone" class="act">DRONE<small>0</small></button>
   <button id="bWarp" class="act">WARP</button>
   <button id="bDock" class="act">DOCK</button>
   <button id="bStop" class="act stop">STOP</button>
@@ -138,13 +140,26 @@ const GATE_R = 1500;
 const JUMP_FUEL = 10;
 const MINE_RANGE = 170;
 const WEAPON_RANGE = 340;
+const MISSILE_RANGE = 760;
 const DOCK_RANGE = 110;
 const TILE = 1024;
 const SAVE_KEY = 'hollowReach.v2';
+const SHIP_S = 1.8;          // ship draw scale
+const DRONE_MAX = 4;
 // bump version/build (and version.json) on every release
-const APP = { version: '1.3.0', build: 4, date: '2026-10-21' };
+const APP = { version: '1.4.0', build: 5, date: '2026-10-21' };
 const UPDATE_URL = 'version.json';
-const UPDATE_CHECK_MS = 30 * 60 * 1000;
+const UPDATE_CHECK_MS = 5 * 60 * 1000;
+
+// ore types: rarer ores need more dangerous space
+const ORE = {
+  ferrum:    { name: 'Ferrum',    base: 10, hard: 1.00, crystal: false, sec: [0, 1],   w: 5,   col: ['#d9dde3', '#6f7785', '#2b303a'], vein: '200,210,225' },
+  veldite:   { name: 'Veldite',   base: 14, hard: 1.00, crystal: false, sec: [0, 1],   w: 3,   col: ['#ead3a6', '#7d6848', '#241d12'], vein: '255,190,90' },
+  azurite:   { name: 'Azurite',   base: 32, hard: 0.80, crystal: true,  sec: [0.4, 1], w: 1.2, col: ['#bfe3ff', '#2f6fb0', '#0c2440'], vein: '120,190,255' },
+  krysite:   { name: 'Krysite',   base: 42, hard: 0.70, crystal: true,  sec: [0, 0.7], w: 1,   col: ['#c4fff7', '#2f9a90', '#0a2e2b'], vein: '120,255,240' },
+  hollowite: { name: 'Hollowite', base: 80, hard: 0.55, crystal: true,  sec: [0, 0.3], w: 0.5, col: ['#f0c6ff', '#7a2fa6', '#1e0a2e'], vein: '230,140,255' },
+};
+const ORE_KEYS = Object.keys(ORE);
 
 const UPG = [
   { k: 'cannon', name: 'Pulse Cannon',       base: 600, desc: '+8 damage per level' },
@@ -156,6 +171,39 @@ const UPG = [
   { k: 'fuel',   name: 'Fuel Tank',          base: 300, desc: '+40 max fuel per level' },
 ];
 
+// manufacturing: ore from your hold + credits -> items
+const RECIPES = [
+  { k: 'missile', name: 'Missile x3',   need: { ferrum: 4, azurite: 1 }, cost: 150, out: { missile: 3 },  desc: 'Homing warhead. Launch with the MISSILE button.' },
+  { k: 'mdrone',  name: 'Mining drone', need: { ferrum: 2, veldite: 6 }, cost: 200, out: { mdrone: 1 },   desc: 'Mines nearby rocks into your hold at half your rate.' },
+  { k: 'cdrone',  name: 'Combat drone', need: { ferrum: 4, krysite: 3 }, cost: 260, out: { cdrone: 1 },   desc: 'Hunts pirates near your ship with a pulse laser.' },
+];
+const ITEM_NAMES = { missile: 'Missiles', mdrone: 'Mining drones', cdrone: 'Combat drones' };
+
+// enemy classes. hull points are in unscaled local units (nose +x)
+const CLS = {
+  scout: {
+    sc: 1.0, size: 15, hp: 60, len: 12, cockpit: 6,
+    hull: [[12, 0], [4, -5], [-6, -6], [-9, 0], [-6, 6], [4, 5]],
+    seams: [[-2, -5, -2, 5], [4, -3, -4, -4], [4, 3, -4, 4]],
+    engines: [[-9, -3], [-9, 3]],
+    turrets: [[2, 0]]
+  },
+  raider: {
+    sc: 1.25, size: 20, hp: 110, len: 18, cockpit: 10,
+    hull: [[18, 0], [8, -6], [-4, -10], [-12, -8], [-14, 0], [-12, 8], [-4, 10], [8, 6]],
+    seams: [[2, -9, -4, -6], [2, 9, -4, 6], [-6, -6, -6, 6]],
+    engines: [[-14, -4], [-14, 4]],
+    turrets: [[3, -7], [3, 7], [-6, 0]]
+  },
+  cruiser: {
+    sc: 1.5, size: 30, hp: 190, len: 24, cockpit: 16,
+    hull: [[26, 0], [16, -6], [4, -12], [-12, -14], [-22, -9], [-24, 0], [-22, 9], [-12, 14], [4, 12], [16, 6]],
+    seams: [[14, -10, -4, -10], [14, 10, -4, 10], [-6, -13, -6, 13]],
+    engines: [[-24, -5], [-24, 5]],
+    turrets: [[10, -9], [10, 9], [-8, -10]]
+  },
+};
+
 const NAMES = ['Ketra','Oryn','Vesk','Halden','Murro','Tessaly','Brimm','Caldis','Ixar','Pell','Sorrow','Vantris'];
 
 // ============ helpers ============
@@ -165,102 +213,27 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const fmt = n => Math.floor(n).toLocaleString();
 const pct = (v, m) => clamp((v / m) * 100, 0, 100) + '%';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function rng(seed) {
   let s = seed >>> 0 || 1;
   return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
 }
 const secColor = s => s >= 0.7 ? '#3ea6ff' : s >= 0.4 ? '#ffb347' : '#e0524c';
 function vibe(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
+function nearestTo(list, x, y, range) {
+  let best = null, bd = range;
+  for (const o of list) { const d = Math.hypot(o.x - x, o.y - y); if (d <= bd) { bd = d; best = o; } }
+  return best;
+}
 
-// ============ sound (synthesized with Web Audio; no audio files) ============
-const SND = {
-  on: (() => { try { return localStorage.getItem('hollowReach.sound') !== 'off'; } catch (e) { return true; } })(),
-  ac: null, master: null, noise: null, eng: null, engG: null, engF: null,
-  init() {
-    if (this.ac) { if (this.ac.state === 'suspended') this.ac.resume(); return; }
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      const ac = new AC();
-      this.ac = ac;
-      this.master = ac.createGain();
-      this.master.gain.value = 0.35;
-      this.master.connect(ac.destination);
-      const len = (ac.sampleRate * 1.5) | 0;
-      this.noise = ac.createBuffer(1, len, ac.sampleRate);
-      const d = this.noise.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-      // engine drone, pitch and volume follow ship speed
-      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 55;
-      const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220;
-      const g = ac.createGain(); g.gain.value = 0;
-      o.connect(f); f.connect(g); g.connect(this.master); o.start();
-      this.eng = o; this.engG = g; this.engF = f;
-    } catch (e) { this.ac = null; }
-  },
-  ok() { return this.on && this.ac && this.ac.state === 'running'; },
-  tone(freq, dur, o = {}) {
-    if (!this.ok()) return;
-    const type = o.type || 'square', vol = o.vol ?? 0.2, slide = o.slide ?? null, delay = o.delay || 0;
-    const t = this.ac.currentTime + delay;
-    const osc = this.ac.createOscillator(), g = this.ac.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t);
-    if (slide) osc.frequency.exponentialRampToValueAtTime(slide, t + dur);
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(g); g.connect(this.master);
-    osc.start(t); osc.stop(t + dur + 0.02);
-  },
-  noiseBurst(dur, o = {}) {
-    if (!this.ok()) return;
-    const t = this.ac.currentTime + (o.delay || 0);
-    const src = this.ac.createBufferSource(); src.buffer = this.noise;
-    const f = this.ac.createBiquadFilter();
-    f.type = o.type || 'lowpass'; f.frequency.value = o.freq || 800; f.Q.value = o.q || 1;
-    const g = this.ac.createGain();
-    g.gain.setValueAtTime(o.vol ?? 0.3, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(f); f.connect(g); g.connect(this.master);
-    src.start(t, rnd(0, 0.5)); src.stop(t + dur + 0.02);
-  },
-  laser()     { this.tone(880, 0.12, { type: 'square', vol: 0.1, slide: 220 }); },
-  hit()       { this.noiseBurst(0.18, { freq: 500, vol: 0.35 }); this.tone(110, 0.2, { type: 'sine', vol: 0.25, slide: 50 }); },
-  playerHit() { this.noiseBurst(0.2, { freq: 300, vol: 0.45 }); this.tone(90, 0.25, { type: 'sine', vol: 0.3, slide: 40 }); },
-  explode()   { this.noiseBurst(0.7, { freq: 900, vol: 0.45 }); this.tone(140, 0.5, { type: 'sine', vol: 0.3, slide: 30 }); },
-  death()     { this.noiseBurst(1.4, { freq: 400, vol: 0.55 }); this.tone(400, 1.2, { type: 'sawtooth', vol: 0.18, slide: 40 }); },
-  mine()      { this.tone(1400 + rnd(-80, 80), 0.05, { type: 'triangle', vol: 0.06 }); },
-  chime()     { [660, 880, 1320].forEach((f, i) => this.tone(f, 0.25, { type: 'triangle', vol: 0.16, delay: i * 0.07 })); },
-  coin()      { this.tone(988, 0.1, { type: 'square', vol: 0.08 }); this.tone(1319, 0.18, { type: 'square', vol: 0.08, delay: 0.08 }); },
-  buy()       { [523, 659, 784].forEach((f, i) => this.tone(f, 0.18, { type: 'triangle', vol: 0.16, delay: i * 0.08 })); },
-  dock()      { this.tone(440, 0.2, { type: 'sine', vol: 0.18 }); this.tone(660, 0.3, { type: 'sine', vol: 0.18, delay: 0.15 }); },
-  warp()      { this.tone(120, 1.0, { type: 'sawtooth', vol: 0.1, slide: 1400 }); this.noiseBurst(0.9, { freq: 2000, type: 'bandpass', vol: 0.15, q: 2 }); },
-  error()     { this.tone(150, 0.25, { type: 'sawtooth', vol: 0.12, slide: 110 }); },
-  click()     { this.tone(1800, 0.03, { type: 'square', vol: 0.05 }); },
-  engine(frac) {
-    if (!this.ok() || !this.eng) return;
-    const t = this.ac.currentTime;
-    this.engG.gain.setTargetAtTime(0.02 + 0.06 * frac, t, 0.1);
-    this.engF.frequency.setTargetAtTime(200 + 500 * frac, t, 0.1);
-    this.eng.frequency.setTargetAtTime(45 + 40 * frac, t, 0.1);
-  },
-  setOn(v) {
-    this.on = v;
-    try { localStorage.setItem('hollowReach.sound', v ? 'on' : 'off'); } catch (e) {}
-    if (!v && this.engG) this.engG.gain.value = 0;
-  }
-};
-// audio contexts can only start after a user gesture
-document.addEventListener('pointerdown', () => SND.init(), true);
-
-// ============ galaxy (fixed layout: 3 rows x 4 cols) ============
+// ============ galaxy (3 rows x 4 cols) ============
 const SYS = (() => {
   const r = rng(7);
   const out = [];
   const PLANET_KINDS = [
-    { c1: '#f2b880', c2: '#8a4b2a', bands: 6, ring: true,  ringCol: '#e8d6a8' }, // gas giant
-    { c1: '#9aa6b8', c2: '#3a4456', bands: 0, ring: false, ringCol: '' },         // rocky
-    { c1: '#d6f1ff', c2: '#4f7fa6', bands: 3, ring: true,  ringCol: '#bfe6ff' }, // ice
+    { c1: '#f2b880', c2: '#8a4b2a', bands: 6, ring: true,  ringCol: '#e8d6a8' },
+    { c1: '#9aa6b8', c2: '#3a4456', bands: 0, ring: false, ringCol: '' },
+    { c1: '#d6f1ff', c2: '#4f7fa6', bands: 3, ring: true,  ringCol: '#bfe6ff' },
   ];
   for (let i = 0; i < 12; i++) {
     const col = i % 4, row = Math.floor(i / 4);
@@ -307,12 +280,14 @@ function path(from, to) {
 }
 
 // ============ persistent state ============
+const freshCargo = () => { const c = {}; ORE_KEYS.forEach(k => c[k] = 0); return c; };
 function freshState() {
   return {
     v: 1, credits: 1000,
     levels: { cannon: 0, mining: 0, shield: 0, armor: 0, cargo: 0, engine: 0, fuel: 0 },
     hull: 100, shield: 60, fuel: 100,
-    cargo: { veldite: 0, krysite: 0 },
+    cargo: freshCargo(),
+    items: { missile: 0, mdrone: 0, cdrone: 0 },
     sysId: 0, kills: 0, deaths: 0, mined: 0
   };
 }
@@ -324,6 +299,7 @@ function load() {
       const s = Object.assign(f, d.s);
       s.levels = Object.assign(f.levels, d.s.levels || {});
       s.cargo = Object.assign(f.cargo, d.s.cargo || {});
+      s.items = Object.assign(f.items, d.s.items || {});
       if (!SYS[s.sysId]) s.sysId = 0;
       return s;
     }
@@ -337,7 +313,8 @@ const P = load();
 const R = {
   target: null, dest: null, stop: 0, route: null,
   mining: false, mineRef: null, mineAcc: 0, chipT: 0, fullWarn: false,
-  fireCool: 0, shieldDelay: 0, hitFlash: 0, shake: 0,
+  fireCool: 0, missCool: 0, shieldDelay: 0, hitFlash: 0, shake: 0,
+  side: 1, msSide: 1,
   autoFire: false, autoMine: false,
   panel: null, saveT: 0, hudT: 0, msgs: [], time: 0
 };
@@ -345,7 +322,9 @@ const U = { zoom: 1 };
 const joy = { active: false, bx: 0, by: 0, kx: 0, ky: 0, dx: 0, dy: 0, mag: 0 };
 const ship = { x: 130, y: 0, vx: 0, vy: 0, heading: 0 };
 const cam = { x: 130, y: 0 };
-const world = { asts: [], npcs: [], beams: [], rings: [], parts: [], texts: [], tAst: 0, tPir: 0, timerA: 0, timerP: 0 };
+const TUR = { a: 0 };           // mining turret aim (world radians)
+const WT = { a: 0, recoil: 0 }; // weapon turrets aim (world radians)
+const world = { asts: [], npcs: [], beams: [], rings: [], parts: [], texts: [], missiles: [], drones: [], tAst: 0, tPir: 0, timerA: 0, timerP: 0 };
 let deferredPrompt = null;
 
 const starLayers = [
@@ -374,9 +353,10 @@ function st() {
     cool: 0.7
   };
 }
-const cargoUsed = () => P.cargo.veldite + P.cargo.krysite;
+const cargoUsed = () => ORE_KEYS.reduce((a, k) => a + (P.cargo[k] || 0), 0);
 const secOf = () => SYS[P.sysId].sec;
-const unitPrice = k => Math.round((k === 'krysite' ? 42 : 12) * (1 + (1 - secOf()) * 0.6));
+const unitPrice = k => Math.round(ORE[k].base * (1 + (1 - secOf()) * 0.6));
+const canMake = r => P.credits >= r.cost && Object.keys(r.need).every(k => P.cargo[k] >= r.need[k]);
 
 // ============ canvas ============
 const canvas = $('c');
@@ -420,6 +400,117 @@ function nebula(sysId) {
   return c;
 }
 
+// ============ sound (synthesized with Web Audio; no audio files) ============
+const SND = {
+  on: (() => { try { return localStorage.getItem('hollowReach.sound') !== 'off'; } catch (e) { return true; } })(),
+  ac: null, master: null, noise: null, eng: null, engG: null, engF: null, mineNodes: null, mineOn: false,
+  init() {
+    if (this.ac) { if (this.ac.state === 'suspended') this.ac.resume(); return; }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ac = new AC();
+      this.ac = ac;
+      this.master = ac.createGain();
+      this.master.gain.value = 0.35;
+      this.master.connect(ac.destination);
+      const len = (ac.sampleRate * 1.5) | 0;
+      this.noise = ac.createBuffer(1, len, ac.sampleRate);
+      const d = this.noise.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 55;
+      const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220;
+      const g = ac.createGain(); g.gain.value = 0;
+      o.connect(f); f.connect(g); g.connect(this.master); o.start();
+      this.eng = o; this.engG = g; this.engF = f;
+    } catch (e) { this.ac = null; }
+  },
+  ok() { return this.on && this.ac && this.ac.state === 'running'; },
+  tone(freq, dur, o = {}) {
+    if (!this.ok()) return;
+    const type = o.type || 'square', vol = o.vol ?? 0.2, slide = o.slide ?? null, delay = o.delay || 0;
+    const t = this.ac.currentTime + delay;
+    const osc = this.ac.createOscillator(), g = this.ac.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(slide, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g); g.connect(this.master);
+    osc.start(t); osc.stop(t + dur + 0.02);
+  },
+  noiseBurst(dur, o = {}) {
+    if (!this.ok()) return;
+    const t = this.ac.currentTime + (o.delay || 0);
+    const src = this.ac.createBufferSource(); src.buffer = this.noise;
+    const f = this.ac.createBiquadFilter();
+    f.type = o.type || 'lowpass'; f.frequency.value = o.freq || 800; f.Q.value = o.q || 1;
+    const g = this.ac.createGain();
+    g.gain.setValueAtTime(o.vol ?? 0.3, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(t, rnd(0, 0.5)); src.stop(t + dur + 0.02);
+  },
+  laser()     { this.tone(880, 0.12, { type: 'square', vol: 0.1, slide: 220 }); },
+  enemyShot() { this.tone(420, 0.12, { type: 'square', vol: 0.06, slide: 160 }); },
+  hit()       { this.noiseBurst(0.18, { freq: 500, vol: 0.35 }); this.tone(110, 0.2, { type: 'sine', vol: 0.25, slide: 50 }); },
+  playerHit() { this.noiseBurst(0.2, { freq: 300, vol: 0.45 }); this.tone(90, 0.25, { type: 'sine', vol: 0.3, slide: 40 }); },
+  explode()   { this.noiseBurst(0.7, { freq: 900, vol: 0.45 }); this.tone(140, 0.5, { type: 'sine', vol: 0.3, slide: 30 }); },
+  boom()      { this.noiseBurst(0.9, { freq: 600, vol: 0.55 }); this.tone(90, 0.6, { type: 'sine', vol: 0.4, slide: 25 }); this.noiseBurst(0.3, { freq: 3000, type: 'highpass', vol: 0.15, delay: 0.02 }); },
+  death()     { this.noiseBurst(1.4, { freq: 400, vol: 0.55 }); this.tone(400, 1.2, { type: 'sawtooth', vol: 0.18, slide: 40 }); },
+  // mining: a bright zap per chip, plus a looping humming beam while the laser is on
+  mine()      { this.tone(2400, 0.07, { type: 'sine', vol: 0.05, slide: 1100 }); this.noiseBurst(0.04, { freq: 4000, type: 'highpass', vol: 0.05 }); },
+  mineSet(on) {
+    if (on === this.mineOn || !this.ok()) return;
+    this.mineOn = on;
+    const ac = this.ac, t = ac.currentTime;
+    if (on) {
+      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 180;
+      const lfo = ac.createOscillator(); lfo.frequency.value = 9;
+      const lg = ac.createGain(); lg.gain.value = 40;
+      lfo.connect(lg); lg.connect(o.frequency);
+      const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 3;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.15);
+      o.connect(f); f.connect(g); g.connect(this.master);
+      o.start(); lfo.start();
+      this.mineNodes = { o, lfo, g };
+    } else if (this.mineNodes) {
+      const { o, lfo, g } = this.mineNodes;
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      o.stop(t + 0.15); lfo.stop(t + 0.15);
+      this.mineNodes = null;
+    }
+  },
+  chime()     { [660, 880, 1320].forEach((f, i) => this.tone(f, 0.25, { type: 'triangle', vol: 0.16, delay: i * 0.07 })); },
+  coin()      { this.tone(988, 0.1, { type: 'square', vol: 0.08 }); this.tone(1319, 0.18, { type: 'square', vol: 0.08, delay: 0.08 }); },
+  buy()       { [523, 659, 784].forEach((f, i) => this.tone(f, 0.18, { type: 'triangle', vol: 0.16, delay: i * 0.08 })); },
+  mfg()       { this.noiseBurst(0.05, { freq: 2500, type: 'bandpass', vol: 0.25, q: 4 }); this.tone(320, 0.08, { type: 'square', vol: 0.1 }); this.noiseBurst(0.05, { freq: 2500, type: 'bandpass', vol: 0.25, q: 4, delay: 0.18 }); this.tone(260, 0.08, { type: 'square', vol: 0.1, delay: 0.18 }); },
+  missile()   { this.noiseBurst(0.5, { freq: 1200, type: 'bandpass', vol: 0.18, q: 1.5 }); this.tone(300, 0.35, { type: 'sawtooth', vol: 0.06, slide: 900 }); },
+  drone()     { this.tone(600, 0.12, { type: 'triangle', vol: 0.12, slide: 1400 }); this.tone(1400, 0.1, { type: 'triangle', vol: 0.08, delay: 0.1 }); },
+  dock()      { this.tone(440, 0.2, { type: 'sine', vol: 0.18 }); this.tone(660, 0.3, { type: 'sine', vol: 0.18, delay: 0.15 }); },
+  warp()      { this.tone(120, 1.0, { type: 'sawtooth', vol: 0.1, slide: 1400 }); this.noiseBurst(0.9, { freq: 2000, type: 'bandpass', vol: 0.15, q: 2 }); },
+  error()     { this.tone(150, 0.25, { type: 'sawtooth', vol: 0.12, slide: 110 }); },
+  click()     { this.tone(1800, 0.03, { type: 'square', vol: 0.05 }); },
+  engine(frac) {
+    if (!this.ok() || !this.eng) return;
+    const t = this.ac.currentTime;
+    this.engG.gain.setTargetAtTime(0.02 + 0.06 * frac, t, 0.1);
+    this.engF.frequency.setTargetAtTime(200 + 500 * frac, t, 0.1);
+    this.eng.frequency.setTargetAtTime(45 + 40 * frac, t, 0.1);
+  },
+  setOn(v) {
+    this.on = v;
+    try { localStorage.setItem('hollowReach.sound', v ? 'on' : 'off'); } catch (e) {}
+    if (!v && this.engG) this.engG.gain.value = 0;
+    if (!v) this.mineSet(false);
+  }
+};
+// audio contexts can only start after a user gesture
+document.addEventListener('pointerdown', () => SND.init(), true);
+
 // ============ feedback ============
 let toastT = 0;
 function log(m) {
@@ -462,19 +553,26 @@ function updateParts(dt) {
 }
 
 // ============ spawning ============
+function pickOre(sec) {
+  const els = ORE_KEYS.filter(k => sec >= ORE[k].sec[0] && sec <= ORE[k].sec[1]);
+  const tot = els.reduce((a, k) => a + ORE[k].w, 0);
+  let r = Math.random() * tot;
+  for (const k of els) { r -= ORE[k].w; if (r <= 0) return k; }
+  return els[0];
+}
 function spawnAst() {
-  const sec = secOf();
   const a = rnd(0, TAU), d = rnd(300, 1250);
-  const kry = Math.random() < (sec < 0.4 ? 0.2 : sec < 0.7 ? 0.07 : 0);
-  const r = kry ? 16 : rnd(20, 30);
-  const n = 9, pts = [];
-  for (let i = 0; i < n; i++) {
-    const t = i / n * TAU;
+  const ot = pickOre(secOf());
+  const crys = ORE[ot].crystal;
+  const r = crys ? 16 : rnd(20, 30);
+  const pts = [];
+  for (let i = 0; i < 9; i++) {
+    const t = i / 9 * TAU;
     const rr = r * rnd(0.78, 1.12);
     pts.push([Math.cos(t) * rr, Math.sin(t) * rr]);
   }
-  const max = kry ? 60 : 140;
-  world.asts.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, r, kry, ore: max, max, pts, rot: rnd(0, TAU) });
+  const max = crys ? 60 : 140;
+  world.asts.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, r, ot, ore: max, max, pts, rot: rnd(0, TAU) });
 }
 function spawnPir() {
   const sec = secOf();
@@ -482,12 +580,19 @@ function spawnPir() {
   const g = SYS[P.sysId].gates[keys[(Math.random() * keys.length) | 0]];
   const a = g + rnd(-0.3, 0.3), d = rnd(1150, 1350);
   const tier = sec < 0.2 ? 3 : sec < 0.4 ? 2 : 1;
-  const hp = 70 + 35 * tier;
-  world.npcs.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, vx: 0, vy: 0, hp, max: hp, tier, fire: rnd(0.5, 1.5), angle: 0, aggro: false });
+  const cls = ['scout', 'raider', 'cruiser'][tier - 1];
+  const C = CLS[cls];
+  world.npcs.push({
+    x: Math.cos(a) * d, y: Math.sin(a) * d, vx: 0, vy: 0,
+    cls, tier, hp: C.hp, max: C.hp, size: C.size,
+    hd: 0, aggro: false, dead: false,
+    turrets: C.turrets.map(([x, y]) => ({ x, y, a: 0, cool: rnd(0.2, 1.2), flash: 0 }))
+  });
 }
 function populate() {
   const sec = secOf();
   world.asts = []; world.npcs = []; world.beams = []; world.rings = []; world.parts = []; world.texts = [];
+  world.missiles = []; world.drones = [];
   world.tAst = sec >= 0.7 ? 8 : sec >= 0.4 ? 11 : 14;
   world.tPir = sec >= 0.7 ? 0 : sec >= 0.4 ? 2 : 5;
   for (let i = 0; i < world.tAst; i++) spawnAst();
@@ -501,24 +606,39 @@ function updateSpawns(dt) {
   if (world.timerP > 25 && world.npcs.length < world.tPir) { world.timerP = 0; spawnPir(); }
 }
 
-// ============ combat & mining ============
+// ============ combat ============
 function beam(x1, y1, x2, y2, col, life) { world.beams.push({ x1, y1, x2, y2, col, life, max: life }); }
+const nearestNpc = r => nearestTo(world.npcs, ship.x, ship.y, r);
+const nearestAst = r => nearestTo(world.asts, ship.x, ship.y, r);
+
+// world position of a weapon turret muzzle on wing k (-1 port, 1 starboard)
+function weaponMuzzle(k) {
+  const b = shipPoint(1, -11 * k);
+  return { x: b.x + Math.cos(WT.a) * 9 * SHIP_S, y: b.y + Math.sin(WT.a) * 9 * SHIP_S };
+}
+
+function hitNpc(n, dmg) {
+  if (n.dead) return;
+  n.hp -= dmg;
+  text(n.x, n.y - 40, '-' + Math.round(dmg), '#9ee6ff');
+  burst(n.x, n.y, '#ffd0a0', 4, 70, 0.3);
+  if (n.hp <= 0) killNpc(n);
+}
 
 function fireAt(n) {
   const s = st();
   R.fireCool = s.cool;
   SND.laser();
-  const dmg = s.dmg * rnd(0.9, 1.1);
-  n.hp -= dmg;
   const k = R.side || 1; R.side = -k;
-  const m = shipPoint(5, -11 * k);
+  WT.recoil = 0.12;
+  const m = weaponMuzzle(k);
   beam(m.x, m.y, n.x, n.y, '#9ee6ff', 0.2);
-  burst(n.x, n.y, '#ffd0a0', 4, 70, 0.3);
-  text(n.x, n.y - 30, '-' + Math.round(dmg), '#9ee6ff');
-  if (n.hp <= 0) killNpc(n);
+  hitNpc(n, s.dmg * rnd(0.9, 1.1));
 }
 
 function killNpc(n) {
+  if (n.dead) return;
+  n.dead = true;
   world.npcs = world.npcs.filter(x => x !== n);
   const bounty = Math.round(150 * n.tier * (1 + (1 - secOf()) * 0.5));
   P.credits += bounty; P.kills++;
@@ -527,8 +647,8 @@ function killNpc(n) {
   world.rings.push({ x: n.x, y: n.y, life: 0.6, max: 0.6, r: 60 });
   text(n.x, n.y - 40, '+' + fmt(bounty) + ' cr', '#ffd166');
   if (R.target && R.target.ref === n) R.target = null;
-  vibe([30, 40, 30]);
   SND.explode(); SND.coin();
+  vibe([30, 40, 30]);
   log(`Pirate destroyed. Bounty ${fmt(bounty)} cr.`);
 }
 
@@ -544,10 +664,10 @@ function mine(a, dt) {
   }
   R.mining = true;
   R.mineRef = a;
-  R.mineAcc += s.rate * dt;
+  R.mineAcc += s.rate * ORE[a.ot].hard * dt;
   while (R.mineAcc >= 1 && a.ore > 0 && cargoUsed() < s.cargoMax) {
     R.mineAcc -= 1; a.ore -= 1;
-    P.cargo[a.kry ? 'krysite' : 'veldite']++;
+    P.cargo[a.ot]++;
     P.mined++;
   }
   R.chipT += dt;
@@ -555,15 +675,15 @@ function mine(a, dt) {
     R.chipT = 0;
     const dx = ship.x - a.x, dy = ship.y - a.y, d = Math.hypot(dx, dy) || 1;
     SND.mine();
-    part(a.x + rnd(-a.r, a.r) * 0.5, a.y + rnd(-a.r, a.r) * 0.5, dx / d * 140, dy / d * 140, 0.5, a.kry ? '#7fffd4' : '#c9b78a', 2.2);
+    part(a.x + rnd(-a.r, a.r) * 0.5, a.y + rnd(-a.r, a.r) * 0.5, dx / d * 140, dy / d * 140, 0.5, `rgb(${ORE[a.ot].vein})`, 2.2);
   }
   if (a.ore <= 0) {
     removeAst(a);
-    burst(a.x, a.y, '#c9b78a', 14, 160, 0.6);
+    burst(a.x, a.y, `rgb(${ORE[a.ot].vein})`, 14, 160, 0.6);
     R.mining = false;
     if (R.target && R.target.kind === 'ast') R.target = null;
     SND.chime();
-    log('Asteroid depleted.');
+    log(`${ORE[a.ot].name} rock depleted.`);
   }
 }
 
@@ -581,11 +701,20 @@ function hitPlayer(dmg) {
   return false;
 }
 
+function damageDrone(d, dmg) {
+  d.hp -= dmg;
+  burst(d.x, d.y, '#ffb347', 6, 90, 0.3);
+  if (d.hp <= 0) {
+    burst(d.x, d.y, '#ff9e6b', 16, 160, 0.6);
+    log(`${d.type === 'com' ? 'Combat' : 'Mining'} drone lost.`);
+  }
+}
+
 function die() {
   P.deaths++;
   const lost = Math.floor(P.credits * 0.1);
   P.credits -= lost;
-  P.cargo = { veldite: 0, krysite: 0 };
+  P.cargo = freshCargo();
   const s = st();
   P.hull = s.hullMax; P.shield = s.shMax; P.fuel = Math.max(P.fuel, 30);
   burst(ship.x, ship.y, '#9ee6ff', 40, 260, 1.1);
@@ -594,19 +723,150 @@ function die() {
   cam.x = ship.x; cam.y = ship.y;
   R.target = null; R.dest = null; R.route = null; R.mining = false; R.autoFire = false; R.autoMine = false;
   populate();
+  SND.mineSet(false);
   flash();
-  vibe([80, 60, 120]);
   SND.death();
-  log(`Ship destroyed. Clone cost ${fmt(lost)} cr. Cargo lost.`);
+  vibe([80, 60, 120]);
+  log(`Ship destroyed. Clone cost ${fmt(lost)} cr. Cargo and drones lost.`);
   save();
 }
 
+// ---- missiles: homing warheads fired from the wing racks ----
+function launchMissile() {
+  if (R.missCool > 0) return;
+  if (P.items.missile <= 0) { SND.error(); log('No missiles. Manufacture more at a station.'); return; }
+  let tgt = R.target && R.target.kind === 'npc' && world.npcs.includes(R.target.ref) ? R.target.ref : null;
+  if (!tgt || dist(ship, tgt) > MISSILE_RANGE) tgt = nearestNpc(MISSILE_RANGE);
+  if (!tgt) { SND.error(); log('No pirate in missile range.'); return; }
+  P.items.missile--;
+  R.missCool = 1.0;
+  const side = R.msSide || 1; R.msSide = -side;
+  const p = shipPoint(-10, 11.5 * side);
+  const a = Math.atan2(tgt.y - p.y, tgt.x - p.x);
+  world.missiles.push({ x: p.x, y: p.y, a, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120, tgt, life: 5, ph: 0, dmg: 120 });
+  burst(p.x, p.y, '#ffd9a0', 10, 120, 0.4);
+  SND.missile(); vibe(12);
+  log('Missile away.');
+}
+
+function explodeMissile(m, hit) {
+  burst(m.x, m.y, '#ffb347', 28, 260, 0.8);
+  burst(m.x, m.y, '#fff2d0', 12, 160, 0.5);
+  world.rings.push({ x: m.x, y: m.y, life: 0.5, max: 0.5, r: 70 });
+  SND.boom();
+  if (hit) hitNpc(hit, m.dmg);
+  for (const n of [...world.npcs]) if (n !== hit && dist(n, m) < 50) hitNpc(n, m.dmg * 0.4);
+}
+
+function updateMissiles(dt) {
+  for (const m of world.missiles) {
+    m.life -= dt; m.ph += dt;
+    if (!m.tgt || !world.npcs.includes(m.tgt)) m.tgt = nearestTo(world.npcs, m.x, m.y, 900) || null;
+    const sp = Math.min(440, 140 + m.ph * 380);
+    const cur = Math.atan2(m.vy, m.vx);
+    const desired = m.tgt ? Math.atan2(m.tgt.y - m.y, m.tgt.x - m.x) : cur;
+    const d = Math.atan2(Math.sin(desired - cur), Math.cos(desired - cur));
+    const nd = cur + clamp(d, -4.2 * dt, 4.2 * dt);
+    m.vx = Math.cos(nd) * sp; m.vy = Math.sin(nd) * sp; m.a = nd;
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    part(m.x - Math.cos(nd) * 8, m.y - Math.sin(nd) * 8, rnd(-20, 20), rnd(-20, 20), 0.5, Math.random() < 0.5 ? '#ffb347' : '#dfe8f5', 2.6);
+    let hit = null;
+    if (m.tgt && dist(m, m.tgt) < m.tgt.size + 8) hit = m.tgt;
+    else for (const n of world.npcs) if (dist(m, n) < n.size + 6) { hit = n; break; }
+    if (hit || m.life <= 0) { explodeMissile(m, hit); m.dead = true; }
+  }
+  world.missiles = world.missiles.filter(m => !m.dead);
+}
+
+// ---- drones: deployed from the ship, fight or mine on their own ----
+function deployDrone() {
+  if (world.drones.length >= DRONE_MAX) { log('Drone limit reached.'); return; }
+  const type = P.items.cdrone > 0 ? 'com' : P.items.mdrone > 0 ? 'min' : null;
+  if (!type) { SND.error(); log('No drones. Manufacture some at a station.'); return; }
+  if (type === 'com') P.items.cdrone--; else P.items.mdrone--;
+  const p = shipPoint(0, 0);
+  world.drones.push({ type, x: p.x, y: p.y, vx: 0, vy: 0, hp: 45, life: 150, ang: rnd(0, TAU), rot: 0, cool: 0, tgt: null, acc: 0, mining: false });
+  burst(p.x, p.y, type === 'com' ? '#ffb347' : '#7fffd4', 14, 120, 0.5);
+  SND.drone();
+  log(type === 'com' ? 'Combat drone launched.' : 'Mining drone launched.');
+}
+
+function recallDrones() {
+  for (const d of world.drones) P.items[d.type === 'com' ? 'cdrone' : 'mdrone']++;
+  if (world.drones.length) log(`${world.drones.length} drone(s) recalled to your hold.`);
+  world.drones = [];
+}
+
+function steer(d, gx, gy, maxSp, dt) {
+  const dx = gx - d.x, dy = gy - d.y, dd = Math.hypot(dx, dy) || 1;
+  const want = Math.min(maxSp, dd * 2.2);
+  const k = Math.min(1, dt * 3);
+  d.vx += (dx / dd * want - d.vx) * k;
+  d.vy += (dy / dd * want - d.vy) * k;
+  d.x += d.vx * dt; d.y += d.vy * dt;
+}
+
+function updateDrones(dt) {
+  const s = st();
+  for (const d of world.drones) {
+    d.life -= dt; d.rot += dt * 18; d.cool -= dt; d.ang += dt * 0.9;
+    d.mining = false;
+    if (d.type === 'com') {
+      if (!d.tgt || d.tgt.dead || !world.npcs.includes(d.tgt) || dist(d, d.tgt) > 700) d.tgt = nearestTo(world.npcs, d.x, d.y, 520) || null;
+      const t = d.tgt;
+      if (t) {
+        const a = Math.atan2(d.y - t.y, d.x - t.x);
+        steer(d, t.x + Math.cos(a) * 170, t.y + Math.sin(a) * 170, 260, dt);
+        if (dist(d, t) < 260 && d.cool <= 0) {
+          d.cool = 0.55;
+          beam(d.x, d.y, t.x, t.y, '#ffb347', 0.2);
+          hitNpc(t, 10 + P.levels.cannon * 4);
+        }
+      } else {
+        steer(d, ship.x + Math.cos(d.ang) * 90, ship.y + Math.sin(d.ang) * 90, 260, dt);
+      }
+    } else {
+      let a = d.tgt;
+      if (!a || !world.asts.includes(a)) a = d.tgt = nearestTo(world.asts, ship.x, ship.y, 520) || null;
+      if (a && cargoUsed() < s.cargoMax) {
+        const ang = Math.atan2(ship.y - a.y, ship.x - a.x);
+        steer(d, a.x + Math.cos(ang) * (a.r + 40), a.y + Math.sin(ang) * (a.r + 40), 220, dt);
+        if (dist(d, a) < a.r + 90) {
+          d.mining = true;
+          d.acc += s.rate * 0.5 * ORE[a.ot].hard * dt;
+          while (d.acc >= 1 && a.ore > 0 && cargoUsed() < s.cargoMax) { d.acc -= 1; a.ore--; P.cargo[a.ot]++; P.mined++; }
+          if (a.ore <= 0) { removeAst(a); d.tgt = null; burst(a.x, a.y, `rgb(${ORE[a.ot].vein})`, 10, 120, 0.5); }
+        }
+      } else {
+        steer(d, ship.x + Math.cos(d.ang) * 90, ship.y + Math.sin(d.ang) * 90, 260, dt);
+      }
+    }
+  }
+  world.drones = world.drones.filter(d => {
+    if (d.life <= 0) { P.items[d.type === 'com' ? 'cdrone' : 'mdrone']++; log('Drone returned to your hold.'); return false; }
+    return d.hp > 0;
+  });
+}
+
+// ---- enemy ships: turrets track the nearest target and fire when aligned ----
+function enemyTarget(n) {
+  let best = null, bd = 900;
+  const dp = dist(n, ship);
+  if (dp < bd) { best = ship; bd = dp; }
+  for (const d of world.drones) { const dd = dist(n, d); if (dd < 300 && dd < bd) { best = d; bd = dd; } }
+  return best;
+}
+function npcPoint(n, lx, ly) {
+  const sc = CLS[n.cls].sc, c = Math.cos(n.hd), s = Math.sin(n.hd);
+  return { x: n.x + (lx * c - ly * s) * sc, y: n.y + (lx * s + ly * c) * sc };
+}
+
 function stepNpcs(dt) {
-  for (const n of world.npcs) {
+  for (const n of [...world.npcs]) {
+    if (n.dead) continue;
     const dx = ship.x - n.x, dy = ship.y - n.y;
     const d = Math.hypot(dx, dy) || 1;
     const ux = dx / d, uy = dy / d;
-    n.angle = Math.atan2(dy, dx);
     n.aggro = d < 900;
     let want = { x: 0, y: 0 };
     if (n.aggro) {
@@ -616,26 +876,31 @@ function stepNpcs(dt) {
     n.vx += (want.x - n.vx) * Math.min(1, dt * 2.5);
     n.vy += (want.y - n.vy) * Math.min(1, dt * 2.5);
     n.x += n.vx * dt; n.y += n.vy * dt;
-    n.fire -= dt;
-    if (n.aggro && d < 260 && n.fire <= 0) {
-      n.fire = 1.4;
-      const dmg = (6 + n.tier * 4) * rnd(0.8, 1.2);
-      beam(n.x, n.y, ship.x, ship.y, '#ff6b6b', 0.2);
-      burst(n.x, n.y, '#ff8a8a', 4, 60, 0.25);
-      if (hitPlayer(dmg)) return;
+    if (n.aggro) n.hd = Math.atan2(dy, dx);
+    else if (Math.hypot(n.vx, n.vy) > 5) n.hd = Math.atan2(n.vy, n.vx);
+
+    const tgt = n.aggro ? enemyTarget(n) : null;
+    for (const t of n.turrets) {
+      t.flash = Math.max(0, t.flash - dt);
+      t.cool -= dt;
+      const tp = npcPoint(n, t.x, t.y);
+      if (!tgt) continue;
+      const wa = Math.atan2(tgt.y - tp.y, tgt.x - tp.x);
+      const diff = Math.atan2(Math.sin(wa - t.a), Math.cos(wa - t.a));
+      t.a += diff * Math.min(1, dt * 5);
+      if (t.cool <= 0 && Math.abs(diff) < 0.3 && dist(tp, tgt) < 320) {
+        t.cool = 1.5 + rnd(0, 0.4);
+        t.flash = 0.12;
+        const sc = CLS[n.cls].sc;
+        const m = { x: tp.x + Math.cos(t.a) * 10 * sc, y: tp.y + Math.sin(t.a) * 10 * sc };
+        beam(m.x, m.y, tgt.x, tgt.y, '#ff6b6b', 0.2);
+        SND.enemyShot();
+        const dmg = (4 + n.tier * 2.5) * rnd(0.85, 1.15);
+        if (tgt === ship) { if (hitPlayer(dmg)) return; }
+        else damageDrone(tgt, dmg);
+      }
     }
   }
-}
-
-function nearestNpc(range) {
-  let best = null, bd = range;
-  for (const n of world.npcs) { const d = dist(ship, n); if (d <= bd) { bd = d; best = n; } }
-  return best;
-}
-function nearestAst(range) {
-  let best = null, bd = range;
-  for (const a of world.asts) { const d = dist(ship, a); if (d <= bd) { bd = d; best = a; } }
-  return best;
 }
 
 // ============ navigation ============
@@ -659,6 +924,7 @@ function doJump(to) {
   ship.vx = 0; ship.vy = 0;
   cam.x = ship.x; cam.y = ship.y;
   R.target = null; R.dest = null; R.mining = false;
+  recallDrones();
   flash();
   vibe(35);
   SND.warp();
@@ -713,7 +979,27 @@ function updateTarget(dt) {
   }
 }
 
-// ============ ship movement ============
+function autoActions(dt) {
+  if (R.autoFire) {
+    const n = nearestNpc(WEAPON_RANGE);
+    if (n && R.fireCool <= 0) fireAt(n);
+  }
+  if (R.autoMine) {
+    const a = nearestAst(MINE_RANGE);
+    if (a) mine(a, dt);
+  }
+}
+
+// ============ ship movement and turrets ============
+function shipPoint(x, y) {
+  const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+  return { x: ship.x + (x * c - y * s) * SHIP_S, y: ship.y + (x * s + y * c) * SHIP_S };
+}
+function turretMuzzle() {
+  const b = shipPoint(-7, 0);
+  return { x: b.x + Math.cos(TUR.a) * 12 * SHIP_S, y: b.y + Math.sin(TUR.a) * 12 * SHIP_S };
+}
+
 function joystickSteer(dt) {
   const s = st();
   const accel = s.speed * 1.6;
@@ -725,9 +1011,7 @@ function joystickSteer(dt) {
 function updateShip(dt) {
   const s = st();
   const accel = s.speed * 1.3;
-  if (joy.active) {
-    // joystick overrides autopilot; velocity already set by joystickSteer
-  } else {
+  if (!joy.active) {
     let steering = false;
     const d = R.dest;
     if (d) {
@@ -760,35 +1044,40 @@ function updateShip(dt) {
   if (Math.hypot(ship.vx, ship.vy) > 5) ship.heading = Math.atan2(ship.vy, ship.vx);
 }
 
-function thrusterFx(dt) {
+function angleTo(a, b) { return Math.atan2(Math.sin(b - a), Math.cos(b - a)); }
+
+function updateTurret(dt) {
+  // mining turret swivels onto the rock it is working
+  const wantM = R.mining && R.mineRef ? Math.atan2(R.mineRef.y - ship.y, R.mineRef.x - ship.x) : ship.heading;
+  TUR.a += angleTo(TUR.a, wantM) * Math.min(1, dt * 7);
+  // weapon turrets track the pirate we're attacking, or the nearest one when guns are hot
+  let wt = null;
+  if (R.target && R.target.kind === 'npc') wt = R.target.ref;
+  else if (R.autoFire) wt = nearestNpc(WEAPON_RANGE);
+  const wantW = wt ? Math.atan2(wt.y - ship.y, wt.x - ship.x) : ship.heading;
+  WT.a += angleTo(WT.a, wantW) * Math.min(1, dt * 12);
+}
+
+function thrusterFx() {
   const sp = Math.hypot(ship.vx, ship.vy);
   if (sp < 25) return;
   const rx = -Math.cos(ship.heading), ry = -Math.sin(ship.heading);
   const n = sp > 160 ? 2 : 1;
   for (let i = 0; i < n; i++) {
-    part(ship.x + rx * 12 + rnd(-2, 2), ship.y + ry * 12 + rnd(-2, 2),
+    part(ship.x + rx * 14 + rnd(-2, 2), ship.y + ry * 14 + rnd(-2, 2),
          rx * sp * 0.35 + rnd(-20, 20), ry * sp * 0.35 + rnd(-20, 20),
          0.35, Math.random() < 0.5 ? '#ffb347' : '#ffe0a0', 3);
   }
 }
 
 // ============ main step ============
-function autoActions(dt) {
-  if (R.autoFire) {
-    const n = nearestNpc(WEAPON_RANGE);
-    if (n && R.fireCool <= 0) fireAt(n);
-  }
-  if (R.autoMine) {
-    const a = nearestAst(MINE_RANGE);
-    if (a) mine(a, dt);
-  }
-}
-
 function step(dt) {
   R.time += dt;
   R.mining = false;
   R.fireCool -= dt;
+  R.missCool -= dt;
   R.hitFlash -= dt;
+  WT.recoil -= dt;
   R.shake *= Math.exp(-dt * 9);
   if (R.shieldDelay > 0) R.shieldDelay -= dt;
   else P.shield = Math.min(st().shMax, P.shield + 10 * dt);
@@ -802,10 +1091,12 @@ function step(dt) {
   }
   updateShip(dt);
   updateTurret(dt);
+  updateDrones(dt);
+  updateMissiles(dt);
   stepNpcs(dt);
-  thrusterFx(dt);
+  thrusterFx();
   SND.engine(Math.min(1, Math.hypot(ship.vx, ship.vy) / st().speed));
-  if (R.mining && R.mineRef) { /* mining particles spawned in mine() */ }
+  SND.mineSet(R.mining);
   world.beams.forEach(b => b.life -= dt);
   world.beams = world.beams.filter(b => b.life > 0);
   world.rings.forEach(r => r.life -= dt);
@@ -849,11 +1140,17 @@ function drawStarLayers() {
   ctx.globalAlpha = 1;
 }
 
+function polyPath(pts) {
+  ctx.beginPath();
+  pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+  ctx.closePath();
+}
+const mirrorY = (pts, k) => pts.map(([x, y]) => [x, y * k]);
+
 function drawPlanet() {
   const p = SYS[P.sysId].planet;
   const g = ctx.createRadialGradient(p.x - p.r * 0.35, p.y - p.r * 0.35, p.r * 0.1, p.x, p.y, p.r);
   g.addColorStop(0, p.c1); g.addColorStop(1, p.c2);
-  // atmosphere glow
   const ag = ctx.createRadialGradient(p.x, p.y, p.r * 0.95, p.x, p.y, p.r * 1.12);
   ag.addColorStop(0, 'rgba(160,210,255,0.25)'); ag.addColorStop(1, 'rgba(160,210,255,0)');
   ctx.fillStyle = ag;
@@ -888,6 +1185,8 @@ function drawPlanet() {
   }
 }
 
+function secColorOf(id) { return secColor(SYS[id].sec); }
+
 function drawGates() {
   const sys = SYS[P.sysId];
   ctx.textAlign = 'center';
@@ -897,13 +1196,11 @@ function drawGates() {
     const a = sys.gates[k];
     const x = Math.cos(a) * GATE_R, y = Math.sin(a) * GATE_R;
     const col = secColor(to.sec);
-    // glow
     const gg = ctx.createRadialGradient(x, y, 20, x, y, 90);
     gg.addColorStop(0, col); gg.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.globalAlpha = 0.18; ctx.fillStyle = gg;
     ctx.beginPath(); ctx.arc(x, y, 90, 0, TAU); ctx.fill();
     ctx.globalAlpha = 1;
-    // rotating outer dashes
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(spin * 0.6);
@@ -916,7 +1213,6 @@ function drawGates() {
     ctx.beginPath(); ctx.arc(0, 0, 36, 0, TAU); ctx.stroke();
     ctx.restore();
     ctx.globalAlpha = 1;
-    // inward particles
     if (Math.random() < 0.25) {
       const pa = rnd(0, TAU);
       part(x + Math.cos(pa) * 60, y + Math.sin(pa) * 60, -Math.cos(pa) * 70, -Math.sin(pa) * 70, 0.7, col, 2);
@@ -930,11 +1226,9 @@ function drawGates() {
 
 function drawStation() {
   const t = R.time;
-  // halo
   const hg = ctx.createRadialGradient(0, 0, 40, 0, 0, 130);
   hg.addColorStop(0, 'rgba(62,166,255,0.35)'); hg.addColorStop(1, 'rgba(62,166,255,0)');
   ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, 130, 0, TAU); ctx.fill();
-  // rotating ring with arms
   ctx.save();
   ctx.rotate(t / 9);
   ctx.strokeStyle = '#2b4f72'; ctx.lineWidth = 6;
@@ -948,14 +1242,12 @@ function drawStation() {
     ctx.beginPath(); ctx.arc(68, 0, 3, 0, TAU); ctx.fill();
   }
   ctx.restore();
-  // core hull
   ctx.fillStyle = '#132a42';
   ctx.strokeStyle = '#3ea6ff'; ctx.lineWidth = 3;
   ctx.beginPath();
   for (let i = 0; i < 8; i++) {
     const a = i / 8 * TAU + Math.PI / 8;
-    const r = 46;
-    const x = Math.cos(a) * r, y = Math.sin(a) * r;
+    const x = Math.cos(a) * 46, y = Math.sin(a) * 46;
     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
   ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -965,8 +1257,6 @@ function drawStation() {
   ctx.fillStyle = '#9ee6ff'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('STATION', 0, -78);
 }
-
-function drawPlanetRingsPlaceholder() {}
 
 // per-asteroid surface detail, generated once from its position so it stays stable
 function asteroidDetail(a) {
@@ -988,7 +1278,7 @@ function asteroidDetail(a) {
     }
     veins.push(line);
   }
-  if (a.kry) {
+  if (ORE[a.ot].crystal) {
     const nS = 5 + Math.floor(r() * 4);
     for (let i = 0; i < nS; i++) {
       const ang = r() * TAU, d = r() * a.r * 0.55;
@@ -1012,43 +1302,35 @@ function drawAsteroids() {
   for (const a of world.asts) {
     if (!a.det) a.det = asteroidDetail(a);
     const D = a.det;
+    const O = ORE[a.ot];
     const f = clamp(a.ore / a.max, 0, 1);
-    const kry = a.kry;
-    const hi = kry ? '#c4fff7' : '#ead3a6';
-    const mid = kry ? '#2f9a90' : '#7d6848';
-    const lo = kry ? '#0a2e2b' : '#241d12';
-    const vein = kry ? '120,255,240' : '255,190,90';
+    const [hi, mid, lo] = O.col;
+    const vein = O.vein;
+    const kry = O.crystal;
 
     ctx.save();
     ctx.translate(a.x, a.y);
-
-    // cast shadow, away from the upper-left light
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath(); ctx.ellipse(a.r * 0.3, a.r * 0.35, a.r * 1.05, a.r * 0.9, 0, 0, TAU); ctx.fill();
 
     ctx.rotate(a.rot);
     ctx.globalAlpha = 0.6 + 0.4 * f;
-
-    // body with lit-from-upper-left shading
     const g = ctx.createRadialGradient(a.r * -0.4, a.r * -0.4, a.r * 0.05, 0, 0, a.r * 1.2);
     g.addColorStop(0, hi); g.addColorStop(0.5, mid); g.addColorStop(1, lo);
     polyPath(a.pts); ctx.fillStyle = g; ctx.fill();
 
-    // faceted wedges give the rock a chiseled look
     for (let i = 0; i < a.pts.length; i++) {
       const p = a.pts[i], q = a.pts[(i + 1) % a.pts.length];
       ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.16)';
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.closePath(); ctx.fill();
     }
 
-    // rim light on the lit edge, then the dark outline
     ctx.save();
     ctx.translate(-0.9, -0.9);
     polyPath(a.pts); ctx.strokeStyle = 'rgba(255,245,220,0.45)'; ctx.lineWidth = 1.4; ctx.stroke();
     ctx.restore();
     polyPath(a.pts); ctx.strokeStyle = lo; ctx.lineWidth = 1.3; ctx.stroke();
 
-    // craters: dark bowl with a lit lower rim
     for (const c of D.craters) {
       ctx.fillStyle = 'rgba(20,14,8,0.45)';
       ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.fill();
@@ -1056,7 +1338,6 @@ function drawAsteroids() {
       ctx.beginPath(); ctx.arc(c.x + 0.5, c.y + 0.5, c.r, 0.2 * Math.PI, 1.0 * Math.PI); ctx.stroke();
     }
 
-    // glowing ore veins, brighter with more ore left
     ctx.lineCap = 'round';
     for (const v of D.veins) {
       ctx.beginPath();
@@ -1065,7 +1346,6 @@ function drawAsteroids() {
       ctx.strokeStyle = `rgba(${vein},${0.4 + 0.5 * f})`; ctx.lineWidth = 1.3; ctx.stroke();
     }
 
-    // krysite crystal shards with a slow twinkle
     if (kry) {
       ctx.globalCompositeOperation = 'lighter';
       for (const s of D.shards) {
@@ -1073,8 +1353,8 @@ function drawAsteroids() {
         ctx.save();
         ctx.translate(s.x, s.y); ctx.rotate(s.a);
         const cg = ctx.createLinearGradient(0, -s.w, 0, s.w);
-        cg.addColorStop(0, `rgba(210,255,250,${0.9 * tw})`);
-        cg.addColorStop(1, 'rgba(60,220,200,0.2)');
+        cg.addColorStop(0, `rgba(${vein},${0.9 * tw})`);
+        cg.addColorStop(1, `rgba(${vein},0.15)`);
         polyPath([[s.len, 0], [0, -s.w], [-s.len * 0.3, 0], [0, s.w]]);
         ctx.fillStyle = cg; ctx.fill();
         ctx.restore();
@@ -1088,7 +1368,6 @@ function drawAsteroids() {
       ctx.globalCompositeOperation = 'source-over';
     }
 
-    // depletion cracks appear as the rock is mined out
     const crackN = Math.round((1 - f) * D.cracks.length);
     ctx.strokeStyle = 'rgba(15,10,5,0.75)'; ctx.lineWidth = 1;
     for (let i = 0; i < crackN; i++) {
@@ -1098,21 +1377,19 @@ function drawAsteroids() {
       ctx.stroke();
     }
 
-    // impact glow where the mining laser hits
     if (R.mining && R.mineRef === a) {
       const ang = Math.atan2(ship.y - a.y, ship.x - a.x) - a.rot;
       const ix = Math.cos(ang) * a.r * 0.9, iy = Math.sin(ang) * a.r * 0.9;
       const ig = ctx.createRadialGradient(ix, iy, 0, ix, iy, 12);
-      ig.addColorStop(0, kry ? 'rgba(180,255,245,0.9)' : 'rgba(255,230,160,0.9)');
+      ig.addColorStop(0, `rgba(${vein},0.9)`);
       ig.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(ix, iy, 12, 0, TAU); ctx.fill();
     }
 
-    // ore-remaining ring when you're close
     ctx.lineCap = 'butt';
     ctx.globalAlpha = 1;
     if (dist(ship, a) < 320) {
-      ctx.strokeStyle = kry ? 'rgba(127,255,212,0.55)' : 'rgba(255,220,150,0.5)';
+      ctx.strokeStyle = `rgba(${vein},0.55)`;
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(0, 0, a.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * f); ctx.stroke();
     }
@@ -1120,84 +1397,111 @@ function drawAsteroids() {
   }
 }
 
-function drawNpcs() {
-  for (const n of world.npcs) {
+function drawNpc(n) {
+  const C = CLS[n.cls], sc = C.sc;
+  ctx.save();
+  ctx.translate(n.x, n.y);
+  ctx.rotate(n.hd);
+  for (const [ex, ey] of C.engines) {
+    const eg = ctx.createRadialGradient(ex * sc, ey * sc, 0, ex * sc, ey * sc, 9 * sc);
+    eg.addColorStop(0, n.aggro ? 'rgba(255,140,80,0.9)' : 'rgba(255,120,60,0.45)');
+    eg.addColorStop(1, 'rgba(255,120,60,0)');
+    ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex * sc, ey * sc, 9 * sc, 0, TAU); ctx.fill();
+  }
+  ctx.scale(sc, sc);
+  const hg = ctx.createLinearGradient(-22, -12, 20, 12);
+  hg.addColorStop(0, '#2a1014'); hg.addColorStop(0.5, '#8a3a3a'); hg.addColorStop(1, '#3a1a1e');
+  polyPath(C.hull); ctx.fillStyle = hg; ctx.fill();
+  ctx.strokeStyle = '#1a0a0c'; ctx.lineWidth = 1.2 / sc; ctx.stroke();
+  ctx.strokeStyle = 'rgba(20,6,8,0.7)'; ctx.lineWidth = 0.9 / sc;
+  ctx.beginPath(); for (const [x1, y1, x2, y2] of C.seams) { ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); } ctx.stroke();
+  ctx.strokeStyle = n.aggro ? '#ff6b6b' : '#c04848'; ctx.lineWidth = 1.2 / sc;
+  ctx.beginPath(); ctx.moveTo(-C.len * 0.6, 0); ctx.lineTo(C.len * 0.4, 0); ctx.stroke();
+  ctx.fillStyle = '#ffc2b8';
+  ctx.beginPath(); ctx.ellipse(C.cockpit, 0, 2.6, 1.6, 0, 0, TAU); ctx.fill();
+  for (const t of n.turrets) {
+    const aim = t.a - n.hd;
     ctx.save();
-    ctx.translate(n.x, n.y);
-    ctx.rotate(n.angle + Math.PI / 2);
-    if (n.aggro) {
-      const eg = ctx.createRadialGradient(0, 10, 0, 0, 10, 22);
-      eg.addColorStop(0, 'rgba(255,140,80,0.9)'); eg.addColorStop(1, 'rgba(255,140,80,0)');
-      ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(0, 10, 22, 0, TAU); ctx.fill();
+    ctx.translate(t.x, t.y);
+    ctx.fillStyle = '#2a1418';
+    ctx.beginPath(); ctx.arc(0, 0, 2.8, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#e0524c'; ctx.lineWidth = 0.9 / sc; ctx.stroke();
+    ctx.rotate(aim);
+    ctx.fillStyle = '#1a0a0c';
+    polyPath([[0, -1.1], [8, -0.8], [8, 0.8], [0, 1.1]]); ctx.fill();
+    if (t.flash > 0) {
+      const mg = ctx.createRadialGradient(8, 0, 0, 8, 0, 6);
+      mg.addColorStop(0, 'rgba(255,220,200,0.95)'); mg.addColorStop(1, 'rgba(255,107,107,0)');
+      ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(8, 0, 6, 0, TAU); ctx.fill();
     }
-    ctx.fillStyle = '#5a1e1e'; ctx.strokeStyle = '#e0524c'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(13, 13); ctx.lineTo(0, 8); ctx.lineTo(-13, 13); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#ffb0a8';
-    ctx.beginPath(); ctx.arc(0, -2, 3, 0, TAU); ctx.fill();
     ctx.restore();
-    const w = 40;
-    ctx.fillStyle = '#3a1212'; ctx.fillRect(n.x - w / 2, n.y - 32, w, 5);
-    ctx.fillStyle = '#e0524c'; ctx.fillRect(n.x - w / 2, n.y - 32, w * clamp(n.hp / n.max, 0, 1), 5);
+  }
+  ctx.restore();
+  const bw = 40 * sc, by = n.y - (C.len + 10) * sc;
+  ctx.fillStyle = '#3a1212'; ctx.fillRect(n.x - bw / 2, by, bw, 4);
+  ctx.fillStyle = '#e0524c'; ctx.fillRect(n.x - bw / 2, by, bw * clamp(n.hp / n.max, 0, 1), 4);
+}
+
+function drawDrones() {
+  for (const d of world.drones) {
+    const col = d.type === 'com' ? '#ffb347' : '#7fffd4';
+    if (d.mining && d.tgt) {
+      ctx.globalAlpha = 0.6 + 0.3 * Math.sin(R.time * 30);
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.tgt.x, d.tgt.y); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    const sp = Math.hypot(d.vx, d.vy);
+    const heading = sp > 5 ? Math.atan2(d.vy, d.vx) : d.ang;
+    const gl = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, 16);
+    gl.addColorStop(0, col); gl.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.22; ctx.fillStyle = gl;
+    ctx.beginPath(); ctx.arc(d.x, d.y, 16, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.translate(d.x, d.y);
+    ctx.rotate(heading);
+    for (const [rx, ry] of [[6, -5], [6, 5], [-6, -5], [-6, 5]]) {
+      ctx.save();
+      ctx.translate(rx, ry); ctx.rotate(d.rot); ctx.scale(1, 0.3);
+      ctx.fillStyle = `rgba(${d.type === 'com' ? '255,179,71' : '127,255,212'},0.35)`;
+      ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    polyPath([[7, 0], [0, -5], [-6, 0], [0, 5]]);
+    ctx.fillStyle = '#1b3a57'; ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(1.5, 0, 1.8, 0, TAU); ctx.fill();
+    ctx.restore();
+    if (d.hp < 45) {
+      ctx.fillStyle = '#3a1212'; ctx.fillRect(d.x - 8, d.y - 14, 16, 3);
+      ctx.fillStyle = col; ctx.fillRect(d.x - 8, d.y - 14, 16 * clamp(d.hp / 45, 0, 1), 3);
+    }
   }
 }
 
-// ============ ship scale, mining turret, lasers ============
-const SHIP_S = 1.4;                 // ship draw scale
-const TUR = { a: 0 };               // mining turret aim, world radians
-function shipPoint(x, y) {
-  const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-  return { x: ship.x + (x * c - y * s) * SHIP_S, y: ship.y + (x * s + y * c) * SHIP_S };
-}
-function turretMuzzle() {
-  const b = shipPoint(-7, 0);
-  return { x: b.x + Math.cos(TUR.a) * 12 * SHIP_S, y: b.y + Math.sin(TUR.a) * 12 * SHIP_S };
-}
-function updateTurret(dt) {
-  let want = ship.heading;
-  if (R.mining && R.mineRef) want = Math.atan2(R.mineRef.y - ship.y, R.mineRef.x - ship.x);
-  else if (R.target && R.target.kind === 'npc') want = Math.atan2(R.target.ref.y - ship.y, R.target.ref.x - ship.x);
-  const d = Math.atan2(Math.sin(want - TUR.a), Math.cos(want - TUR.a));
-  TUR.a += d * Math.min(1, dt * 7);
+function drawMissiles() {
+  for (const m of world.missiles) {
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    ctx.rotate(m.a);
+    const L = 10 + Math.sin(m.ph * 60) * 2;
+    ctx.fillStyle = 'rgba(255,170,80,0.9)';
+    polyPath([[-7, -2], [-7 - L, 0], [-7, 2]]); ctx.fill();
+    ctx.fillStyle = 'rgba(255,250,220,0.95)';
+    polyPath([[-7, -1], [-7 - L * 0.5, 0], [-7, 1]]); ctx.fill();
+    polyPath([[9, 0], [4, -2.6], [-7, -2.6], [-7, 2.6], [4, 2.6]]);
+    ctx.fillStyle = '#d8dee9'; ctx.fill();
+    ctx.strokeStyle = '#4a5566'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.fillStyle = '#ff6b6b';
+    polyPath([[-5, -2.6], [-9, -6], [-8, -2.6]]); ctx.fill();
+    polyPath([[-5, 2.6], [-9, 6], [-8, 2.6]]); ctx.fill();
+    polyPath([[9, 0], [4, -2.6], [4, 2.6]]); ctx.fill();
+    ctx.restore();
+  }
 }
 
-// continuous mining beam: crackling core, traveling energy pulses, glow at the muzzle
-function drawMiningBeam() {
-  if (!R.mining || !R.mineRef) return;
-  const a = R.mineRef;
-  const m = turretMuzzle();
-  const dx = a.x - m.x, dy = a.y - m.y;
-  const L = Math.hypot(dx, dy) || 1;
-  const nx = -dy / L, ny = dx / L;
-  const pulse = 0.75 + 0.25 * Math.sin(R.time * 30);
-  const pts = [];
-  for (let i = 0; i <= 8; i++) {
-    const t = i / 8;
-    const j = (i === 0 || i === 8) ? 0 : rnd(-3, 3);
-    pts.push([m.x + dx * t + nx * j, m.y + dy * t + ny * j]);
-  }
-  const strokePts = () => {
-    ctx.beginPath();
-    pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
-    ctx.stroke();
-  };
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = '#7fffd4'; ctx.globalAlpha = 0.25 * pulse; ctx.lineWidth = 8; strokePts();
-  ctx.globalAlpha = 0.7 * pulse; ctx.lineWidth = 2.4; strokePts();
-  ctx.strokeStyle = '#e8fff9'; ctx.globalAlpha = pulse; ctx.lineWidth = 1; strokePts();
-  for (let i = 0; i < 3; i++) {
-    const t = (R.time * 1.6 + i / 3) % 1;
-    ctx.fillStyle = '#ccfff2'; ctx.globalAlpha = 0.9;
-    ctx.beginPath(); ctx.arc(m.x + dx * t, m.y + dy * t, 2, 0, TAU); ctx.fill();
-  }
-  const mg = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, 7);
-  mg.addColorStop(0, 'rgba(200,255,240,0.9)'); mg.addColorStop(1, 'rgba(127,255,212,0)');
-  ctx.globalAlpha = pulse; ctx.fillStyle = mg;
-  ctx.beginPath(); ctx.arc(m.x, m.y, 7, 0, TAU); ctx.fill();
-  ctx.globalAlpha = 1; ctx.lineCap = 'butt';
-}
-
-// laser bolts: each shot is a glowing bolt that travels from the hardpoint to its target
 function drawBeams() {
   ctx.lineCap = 'round';
   ctx.globalCompositeOperation = 'lighter';
@@ -1209,18 +1513,15 @@ function drawBeams() {
     const tail = clamp(p * 2.4 - 0.5, 0, 1);
     const hx = b.x1 + dx * head, hy = b.y1 + dy * head;
     const tx = b.x1 + dx * tail, ty = b.y1 + dy * tail;
-    // faint full trace
     ctx.strokeStyle = b.col;
     ctx.globalAlpha = 0.12 * life; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
-    // bolt: wide glow, colored body, white-hot core
     ctx.globalAlpha = 0.35 * life; ctx.lineWidth = 10;
     ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
     ctx.globalAlpha = 0.9 * life; ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
     ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = life; ctx.lineWidth = 1.3;
     ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
-    // muzzle flash
     if (p < 0.5) {
       const mr = 6 + (0.5 - p) * 20;
       const mg = ctx.createRadialGradient(b.x1, b.y1, 0, b.x1, b.y1, mr);
@@ -1228,7 +1529,6 @@ function drawBeams() {
       ctx.globalAlpha = 0.9 * (1 - p * 2);
       ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(b.x1, b.y1, mr, 0, TAU); ctx.fill();
     }
-    // impact bloom once the bolt lands
     if (head >= 1) {
       const ir = 8 + p * 14;
       const ig = ctx.createRadialGradient(b.x2, b.y2, 0, b.x2, b.y2, ir);
@@ -1241,6 +1541,43 @@ function drawBeams() {
   ctx.globalCompositeOperation = 'source-over';
   ctx.lineCap = 'butt';
   drawMiningBeam();
+}
+
+// continuous mining beam: crackling core, traveling energy pulses, glow at the muzzle
+function drawMiningBeam() {
+  if (!R.mining || !R.mineRef) return;
+  const a = R.mineRef;
+  const m = turretMuzzle();
+  const dx = a.x - m.x, dy = a.y - m.y;
+  const L = Math.hypot(dx, dy) || 1;
+  const nx = -dy / L, ny = dx / L;
+  const pulse = 0.75 + 0.25 * Math.sin(R.time * 30);
+  const vein = ORE[a.ot].vein;
+  const pts = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    const j = (i === 0 || i === 8) ? 0 : rnd(-3, 3);
+    pts.push([m.x + dx * t + nx * j, m.y + dy * t + ny * j]);
+  }
+  const strokePts = () => {
+    ctx.beginPath();
+    pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+    ctx.stroke();
+  };
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = `rgb(${vein})`; ctx.globalAlpha = 0.25 * pulse; ctx.lineWidth = 8; strokePts();
+  ctx.globalAlpha = 0.7 * pulse; ctx.lineWidth = 2.4; strokePts();
+  ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = pulse; ctx.lineWidth = 1; strokePts();
+  for (let i = 0; i < 3; i++) {
+    const t = (R.time * 1.6 + i / 3) % 1;
+    ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(m.x + dx * t, m.y + dy * t, 2, 0, TAU); ctx.fill();
+  }
+  const mg = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, 7);
+  mg.addColorStop(0, `rgba(${vein},0.9)`); mg.addColorStop(1, `rgba(${vein},0)`);
+  ctx.globalAlpha = pulse; ctx.fillStyle = mg;
+  ctx.beginPath(); ctx.arc(m.x, m.y, 7, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1; ctx.lineCap = 'butt';
 }
 
 function drawRingsFx() {
@@ -1278,42 +1615,28 @@ function drawTexts() {
   ctx.globalAlpha = 1;
 }
 
-// ship geometry (local space: nose along +x, ~40 units long)
-const SHIP_HULL = [[20, 0], [13, -4], [6, -8], [-4, -9.5], [-12, -8.5], [-15, -4.5], [-15, 4.5], [-12, 8.5], [-4, 9.5], [6, 8], [13, 4]];
-const SHIP_WING = [[5, -7.5], [-2, -13], [-9, -17], [-14, -16.5], [-13, -12], [-8, -7.5]];
-const SHIP_CANOPY = [[14, 0], [8, -3.2], [2, -3.8], [-3, -2.8], [-4, 0], [-3, 2.8], [2, 3.8], [8, 3.2]];
-const SHIP_SEAMS = [[9, -6.5, 6, -3.5], [2, -8.2, 0, -5], [-5, -9.2, -6, -5], [-9, -8, -10, -5.5]];
-
-function polyPath(pts) {
-  ctx.beginPath();
-  pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
-  ctx.closePath();
-}
-const mirrorY = (pts, k) => pts.map(([x, y]) => [x, y * k]);
-
+// the player ship: hull, wings with weapon turrets and missile racks, mining turret
 function drawShip() {
-  const t = R.time;
-  const s = st();
+  const t = R.time, s = st();
   const sp = Math.hypot(ship.vx, ship.vy);
   const boost = clamp(sp / s.speed, 0, 1.2);
   const shFrac = clamp(P.shield / s.shMax, 0, 1);
   const hfrac = clamp(P.hull / s.hullMax, 0, 1);
-  const fire = clamp(R.fireCool / 0.7, 0, 1);
   const fa = clamp(R.hitFlash * 3, 0, 0.8);
 
   ctx.save();
   ctx.translate(ship.x, ship.y);
 
-  // ---- shield: hex lattice clipped to a bubble, world-aligned ----
+  // shield bubble: hex lattice, world-aligned
   if (shFrac > 0.02 || fa > 0) {
+    const SR = 52;
     ctx.save();
-    ctx.beginPath(); ctx.arc(0, 0, 40, 0, TAU); ctx.clip();
+    ctx.beginPath(); ctx.arc(0, 0, SR, 0, TAU); ctx.clip();
     ctx.fillStyle = `rgba(127,217,255,${0.05 * shFrac + fa * 0.2})`;
-    ctx.fillRect(-44, -44, 88, 88);
-    ctx.strokeStyle = `rgba(127,217,255,${0.22 * shFrac + fa * 0.6})`;
-    ctx.lineWidth = 1;
+    ctx.fillRect(-SR - 4, -SR - 4, (SR + 4) * 2, (SR + 4) * 2);
+    ctx.strokeStyle = `rgba(127,217,255,${0.22 * shFrac + fa * 0.6})`; ctx.lineWidth = 1;
     const hs = 5;
-    for (let r = -6; r <= 6; r++) for (let q = -6; q <= 6; q++) {
+    for (let r = -9; r <= 9; r++) for (let q = -9; q <= 9; q++) {
       const hx = q * hs * 1.5, hy = (r + q * 0.5) * hs * 1.732;
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
@@ -1326,9 +1649,9 @@ function drawShip() {
     ctx.restore();
     ctx.save();
     ctx.rotate(t * 0.8);
-    ctx.setLineDash([10, 8]); ctx.lineWidth = 2;
+    ctx.setLineDash([12, 9]); ctx.lineWidth = 2;
     ctx.strokeStyle = `rgba(158,230,255,${0.2 + 0.5 * shFrac + fa * 0.5})`;
-    ctx.beginPath(); ctx.arc(0, 0, 41, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, SR + 1, 0, TAU); ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
   }
@@ -1336,7 +1659,7 @@ function drawShip() {
   ctx.rotate(ship.heading);
   ctx.scale(SHIP_S, SHIP_S);
 
-  // ---- engine glow and exhaust flames (flicker, grow with speed) ----
+  // engine glow and exhaust
   for (const ey of [-10.5, 10.5]) {
     const flick = 0.85 + 0.15 * Math.sin(t * 47 + ey) + Math.random() * 0.08;
     const L = (5 + boost * 16) * flick;
@@ -1352,7 +1675,7 @@ function drawShip() {
     polyPath([[-21, ey - 1.5], [-21 - L * 0.55, ey], [-21, ey + 1.5]]); ctx.fill();
   }
 
-  // ---- engine pods ----
+  // engine pods
   for (const k of [-1, 1]) {
     polyPath(mirrorY([[-6, 7], [-16, 7.5], [-22, 9.5], [-22, 12], [-16, 12.5], [-6, 11]], k));
     ctx.fillStyle = '#1d3d5e'; ctx.fill();
@@ -1365,43 +1688,30 @@ function drawShip() {
     ctx.beginPath(); ctx.ellipse(-21.6, 10.75 * k, 1.1, 2.1, 0, 0, TAU); ctx.fill();
   }
 
-  // ---- swept wings ----
+  // swept wings
   for (const k of [-1, 1]) {
     const wg = ctx.createLinearGradient(0, -17 * k, 0, -6 * k);
     wg.addColorStop(0, '#244a6e'); wg.addColorStop(1, '#6ba8d6');
-    polyPath(mirrorY(SHIP_WING, k)); ctx.fillStyle = wg; ctx.fill();
+    polyPath(mirrorY([[5, -7.5], [-2, -13], [-9, -17], [-14, -16.5], [-13, -12], [-8, -7.5]], k));
+    ctx.fillStyle = wg; ctx.fill();
     ctx.strokeStyle = '#0c1d30'; ctx.lineWidth = 1; ctx.stroke();
-    // wing seams
     ctx.strokeStyle = 'rgba(12,29,48,0.8)'; ctx.lineWidth = 0.7;
     ctx.beginPath();
     ctx.moveTo(2, -9 * k); ctx.lineTo(-10, -14.5 * k);
     ctx.moveTo(-3, -10.5 * k); ctx.lineTo(-11, -10.5 * k);
     ctx.stroke();
-    // greebles along the wing root
     ctx.fillStyle = '#0f2236';
     for (let i = 0; i < 4; i++) {
       const gx = -3 - i * 2.4, gy = (-10 - i * 0.8) * k;
       polyPath([[gx, gy], [gx - 1.3, gy], [gx - 1.3, gy - 1.6 * k], [gx, gy - 1.6 * k]]); ctx.fill();
     }
-    // forward hardpoint with firing glow
-    const hx = -2, hy = -11 * k;
-    ctx.fillStyle = '#16293d';
-    polyPath([[hx, hy - 1.2], [hx + 7, hy - 1], [hx + 7, hy + 1], [hx, hy + 1.2]]); ctx.fill();
-    if (fire > 0) {
-      const g = ctx.createRadialGradient(hx + 7, hy, 0, hx + 7, hy, 6 + fire * 5);
-      g.addColorStop(0, `rgba(158,230,255,${fire})`);
-      g.addColorStop(1, 'rgba(158,230,255,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(hx + 7, hy, 6 + fire * 5, 0, TAU); ctx.fill();
-    }
-    // wingtip nav light, alternating blink (red port, green starboard)
+    // wingtip nav light, alternating blink
     const on = Math.sin(t * 5 + (k > 0 ? Math.PI : 0)) > 0.2;
     const lc = k < 0 ? '255,77,77' : '92,255,138';
     const tipX = -13.5, tipY = -16.2 * k;
     if (on) {
       const g = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 6);
-      g.addColorStop(0, `rgba(${lc},0.9)`);
-      g.addColorStop(1, `rgba(${lc},0)`);
+      g.addColorStop(0, `rgba(${lc},0.9)`); g.addColorStop(1, `rgba(${lc},0)`);
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(tipX, tipY, 6, 0, TAU); ctx.fill();
     }
@@ -1409,64 +1719,80 @@ function drawShip() {
     ctx.beginPath(); ctx.arc(tipX, tipY, 1.3, 0, TAU); ctx.fill();
   }
 
-  // ---- main hull with metallic gradient ----
+  // hull
   const hg = ctx.createLinearGradient(-15, -9, 18, 9);
-  hg.addColorStop(0, '#22507a');
-  hg.addColorStop(0.45, '#9fd3f2');
-  hg.addColorStop(0.6, '#eef9ff');
-  hg.addColorStop(1, '#346f9c');
-  polyPath(SHIP_HULL); ctx.fillStyle = hg; ctx.fill();
+  hg.addColorStop(0, '#22507a'); hg.addColorStop(0.45, '#9fd3f2');
+  hg.addColorStop(0.6, '#eef9ff'); hg.addColorStop(1, '#346f9c');
+  polyPath([[20, 0], [13, -4], [6, -8], [-4, -9.5], [-12, -8.5], [-15, -4.5], [-15, 4.5], [-12, 8.5], [-4, 9.5], [6, 8], [13, 4]]);
+  ctx.fillStyle = hg; ctx.fill();
   ctx.strokeStyle = '#0b1c2e'; ctx.lineWidth = 1.2; ctx.stroke();
-  // armor plate inset
   polyPath([[15, 0], [9, -3.4], [0, -6.2], [-10, -6.2], [-13, -2.2], [-13, 2.2], [-10, 6.2], [0, 6.2], [9, 3.4]]);
   ctx.fillStyle = 'rgba(20,50,80,0.22)'; ctx.fill();
   ctx.strokeStyle = 'rgba(10,28,46,0.6)'; ctx.lineWidth = 0.8; ctx.stroke();
-  // panel seams, mirrored
   ctx.strokeStyle = 'rgba(10,28,46,0.75)'; ctx.lineWidth = 0.7;
   ctx.beginPath();
-  for (const [x1, y1, x2, y2] of SHIP_SEAMS) {
+  for (const [x1, y1, x2, y2] of [[9, -6.5, 6, -3.5], [2, -8.2, 0, -5], [-5, -9.2, -6, -5], [-9, -8, -10, -5.5]]) {
     ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
     ctx.moveTo(x1, -y1); ctx.lineTo(x2, -y2);
   }
   ctx.stroke();
-  // spine light strip, pulsing
   ctx.strokeStyle = `rgba(127,230,255,${0.35 + 0.3 * Math.sin(t * 3)})`;
   ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(13, 0); ctx.stroke();
-  // dorsal fin
   polyPath([[-1, -2.5], [-9, -2.2], [-11, -7], [-5, -4.3]]);
   ctx.fillStyle = '#7fb7e0'; ctx.fill();
-  // vents
   ctx.fillStyle = '#0a1a2c';
   for (const vx of [-6, -2.5]) for (const k of [-1, 1]) {
     polyPath([[vx, -5.6 * k], [vx - 1.6, -5.6 * k], [vx - 2.6, -3.9 * k], [vx - 1, -3.9 * k]]); ctx.fill();
   }
 
-  // ---- canopy with a sweeping glint ----
+  // canopy with a sweeping glint
   const cg = ctx.createLinearGradient(-4, 0, 14, 0);
-  cg.addColorStop(0, '#0b2238');
-  cg.addColorStop(1, '#3fd0ff');
-  polyPath(SHIP_CANOPY); ctx.fillStyle = cg; ctx.fill();
+  cg.addColorStop(0, '#0b2238'); cg.addColorStop(1, '#3fd0ff');
+  polyPath([[14, 0], [8, -3.2], [2, -3.8], [-3, -2.8], [-4, 0], [-3, 2.8], [2, 3.8], [8, 3.2]]);
+  ctx.fillStyle = cg; ctx.fill();
   ctx.strokeStyle = '#061320'; ctx.lineWidth = 1; ctx.stroke();
   ctx.save();
-  polyPath(SHIP_CANOPY); ctx.clip();
+  polyPath([[14, 0], [8, -3.2], [2, -3.8], [-3, -2.8], [-4, 0], [-3, 2.8], [2, 3.8], [8, 3.2]]); ctx.clip();
   const gx = 12 - ((t * 7) % 18);
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   polyPath([[gx, -4], [gx + 2.5, -4], [gx - 3, 4], [gx - 5.5, 4]]); ctx.fill();
   ctx.restore();
 
-  // ---- spinning radar dish with blinking beacon ----
-  ctx.strokeStyle = '#9fd3f2'; ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.moveTo(6, -3.5); ctx.lineTo(6, -8); ctx.stroke();
-  ctx.save();
-  ctx.translate(6, -9.5); ctx.rotate(t * 2.2); ctx.scale(1, 0.4);
-  ctx.fillStyle = '#cfeeff';
-  ctx.beginPath(); ctx.arc(0, 0, 3.4, 0, TAU); ctx.fill();
-  ctx.restore();
-  ctx.fillStyle = Math.sin(t * 6) > 0 ? '#ff6b6b' : '#5a2a2a';
-  ctx.beginPath(); ctx.arc(6, -9.5, 0.9, 0, TAU); ctx.fill();
+  // weapon turrets on each wing root: swivel to the target, recoil on each shot
+  const wAim = WT.a - ship.heading;
+  const rec = Math.max(0, WT.recoil) * 40;
+  for (const k of [-1, 1]) {
+    ctx.save();
+    ctx.translate(1, -11 * k);
+    ctx.fillStyle = '#122a42';
+    ctx.beginPath(); ctx.ellipse(0, 0, 4.2, 3.2, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#061320'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.rotate(wAim);
+    ctx.fillStyle = '#1c3f5e';
+    polyPath([[-1, -2.2 - rec * 0.05 * k], [7 - rec, -1.6], [7 - rec, 1.6], [-1, 2.2]]);
+    ctx.fill();
+    ctx.strokeStyle = '#0a1a2c'; ctx.lineWidth = 0.7; ctx.stroke();
+    ctx.fillStyle = '#6ba8d6';
+    ctx.beginPath(); ctx.arc(0, 0, 2.2, 0, TAU); ctx.fill();
+    if (WT.recoil > 0) {
+      const mg = ctx.createRadialGradient(7, 0, 0, 7, 0, 6);
+      mg.addColorStop(0, 'rgba(255,255,255,0.95)'); mg.addColorStop(1, 'rgba(158,230,255,0)');
+      ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(7, 0, 6, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
 
-  // ---- mining turret: swivels toward its work, drill spins while mining ----
+  // missile racks on the wing trailing edges, tipped when loaded
+  for (const k of [-1, 1]) {
+    polyPath([[-7, 11.5 * k], [-12, 11.5 * k], [-12, 13.5 * k], [-7, 13.5 * k]]);
+    ctx.fillStyle = '#15293d'; ctx.fill();
+    ctx.strokeStyle = '#0a1a2c'; ctx.lineWidth = 0.7; ctx.stroke();
+    ctx.fillStyle = P.items.missile > 0 ? '#ff8a5c' : '#3a2a2a';
+    ctx.beginPath(); ctx.arc(-9.5, 12.5 * k, 1.1, 0, TAU); ctx.fill();
+  }
+
+  // mining turret: swivels toward its work, drill spins while mining
   {
     const aim = TUR.a - ship.heading;
     ctx.save();
@@ -1479,11 +1805,9 @@ function drawShip() {
       ctx.beginPath(); ctx.arc(0, 0, 4.1, i * TAU / 4 + 0.25, (i + 1) * TAU / 4 - 0.25); ctx.stroke();
     }
     ctx.rotate(aim);
-    // swivel head
     polyPath([[-2, -3.6], [3, -2.8], [5, -1.4], [5, 1.4], [3, 2.8], [-2, 3.6]]);
     ctx.fillStyle = '#23506f'; ctx.fill();
     ctx.strokeStyle = '#0a1a2c'; ctx.lineWidth = 0.9; ctx.stroke();
-    // twin barrels with glowing muzzles while mining
     for (const k of [-1, 1]) {
       const y0 = 1.9 * k;
       polyPath([[4, y0 - 0.8], [12, y0 - 0.8], [12, y0 + 0.8], [4, y0 + 0.8]]);
@@ -1491,7 +1815,6 @@ function drawShip() {
       ctx.fillStyle = R.mining ? '#7fffd4' : '#2a5a6a';
       polyPath([[11, y0 - 0.5], [12.6, y0 - 0.3], [12.6, y0 + 0.3], [11, y0 + 0.5]]); ctx.fill();
     }
-    // drill head: dashes spin faster while mining
     ctx.beginPath(); ctx.arc(14, 0, 2.6, 0, TAU);
     ctx.fillStyle = R.mining ? '#1e6a64' : '#163a48'; ctx.fill();
     ctx.setLineDash([3, 2.5]);
@@ -1502,14 +1825,13 @@ function drawShip() {
     ctx.restore();
   }
 
-  // ---- hit flash overlay ----
+  // hit flash overlay
   if (fa > 0) {
-    polyPath(SHIP_HULL);
+    polyPath([[20, 0], [13, -4], [6, -8], [-4, -9.5], [-12, -8.5], [-15, -4.5], [-15, 4.5], [-12, 8.5], [-4, 9.5], [6, 8], [13, 4]]);
     ctx.fillStyle = `rgba(255,255,255,${fa})`; ctx.fill();
   }
   ctx.restore();
 
-  // damaged hull throws sparks
   if (hfrac < 0.4 && Math.random() < 0.2) {
     part(ship.x + rnd(-8, 8), ship.y + rnd(-6, 6), rnd(-30, 30), rnd(-30, 30), 0.35, '#ffb347', 2);
   }
@@ -1518,7 +1840,7 @@ function drawShip() {
 function drawTargetRing() {
   if (!R.target) return;
   const t = R.target;
-  const r = t.kind === 'ast' ? t.ref.r + 10 : t.kind === 'npc' ? 26 : t.kind === 'station' ? 76 : 70;
+  const r = t.kind === 'ast' ? t.ref.r + 10 : t.kind === 'npc' ? t.ref.size + 10 : t.kind === 'station' ? 76 : 70;
   ctx.setLineDash([6, 6]);
   ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.85;
   ctx.beginPath(); ctx.arc(t.ref.x, t.ref.y, r, 0, TAU); ctx.stroke();
@@ -1533,8 +1855,7 @@ function drawVignette() {
 
 function drawJoystick() {
   ctx.save();
-  const showIdle = !joy.active;
-  if (showIdle) {
+  if (!joy.active) {
     const bx = Math.max(90, W * 0.16), by = H - 150;
     ctx.globalAlpha = 0.25; ctx.strokeStyle = '#9ee6ff'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(bx, by, 56, 0, TAU); ctx.stroke();
@@ -1568,8 +1889,10 @@ function draw() {
   drawGates();
   drawStation();
   drawAsteroids();
-  drawNpcs();
+  for (const n of world.npcs) drawNpc(n);
+  drawDrones();
   drawBeams();
+  drawMissiles();
   drawRingsFx();
   drawParts();
   drawShip();
@@ -1592,7 +1915,6 @@ function drawMini() {
   mctx.beginPath(); mctx.arc(c, c, c - 2, 0, TAU); mctx.clip();
   mctx.fillStyle = 'rgba(5,7,13,0.85)'; mctx.fillRect(0, 0, S, S);
   const P2 = (x, y) => [c + (x - ship.x) * sc, c + (y - ship.y) * sc];
-  // gates
   for (const k in SYS[P.sysId].gates) {
     const g = gatePos(Number(k));
     let [x, y] = P2(g.x, g.y);
@@ -1601,17 +1923,15 @@ function drawMini() {
     mctx.fillStyle = secColor(SYS[k].sec);
     mctx.beginPath(); mctx.arc(x, y, 5, 0, TAU); mctx.fill();
   }
-  // station
   const [stx, sty] = P2(0, 0);
   mctx.fillStyle = '#3ea6ff';
   mctx.beginPath(); mctx.arc(stx, sty, 4, 0, TAU); mctx.fill();
-  // asteroids
   mctx.fillStyle = 'rgba(200,180,130,0.8)';
   for (const a of world.asts) { const [x, y] = P2(a.x, a.y); mctx.fillRect(x - 1, y - 1, 2, 2); }
-  // pirates
   mctx.fillStyle = '#ff6b6b';
   for (const n of world.npcs) { const [x, y] = P2(n.x, n.y); mctx.beginPath(); mctx.arc(x, y, 3, 0, TAU); mctx.fill(); }
-  // ship
+  mctx.fillStyle = '#7fffd4';
+  for (const d of world.drones) { const [x, y] = P2(d.x, d.y); mctx.fillRect(x - 1.5, y - 1.5, 3, 3); }
   mctx.save();
   mctx.translate(c, c); mctx.rotate(ship.heading);
   mctx.fillStyle = '#ffffff';
@@ -1625,18 +1945,18 @@ function drawMini() {
 // ============ HUD ============
 function statusText() {
   if (joy.active) return 'Manual flight';
-  if (R.mining && R.target) return 'Mining ' + (R.target.ref.kry ? 'Krysite' : 'Veldite');
-  if (R.mining && R.mineRef) return 'Mining ' + (R.mineRef.kry ? 'Krysite' : 'Veldite');
+  if (R.mining && R.mineRef) return 'Mining ' + ORE[R.mineRef.ot].name;
   if (R.target) {
     const k = R.target.kind;
     if (k === 'npc') return 'Engaging pirate';
-    if (k === 'ast') return 'Approaching asteroid';
+    if (k === 'ast') return 'Approaching ' + ORE[R.target.ref.ot].name;
     if (k === 'gate') return 'Warping to ' + SYS[R.target.to].name;
     return 'Docking';
   }
   if (R.route != null) return 'Autopilot to ' + SYS[R.route].name;
   if (R.autoMine && cargoUsed() >= st().cargoMax) return 'Cargo full';
   if (R.autoFire || R.autoMine) return 'Standby' + (R.autoFire ? ' · guns hot' : '');
+  if (world.drones.length) return `${world.drones.length} drone(s) deployed`;
   return R.dest ? 'Moving' : 'Idle';
 }
 
@@ -1654,63 +1974,11 @@ function hud() {
   $('status').textContent = R.panel ? '' : statusText();
   $('bFire').classList.toggle('on', R.autoFire);
   $('bMine').classList.toggle('on', R.autoMine);
+  $('bMiss').querySelector('small').textContent = P.items.missile;
+  $('bDrone').querySelector('small').textContent = world.drones.length + '/' + (P.items.cdrone + P.items.mdrone);
   $('bWarp').classList.toggle('on', R.route != null || (R.target && R.target.kind === 'gate'));
   $('bDock').classList.toggle('on', R.target && R.target.kind === 'station');
   $('bStop').classList.toggle('hide', !(R.target || R.dest || R.route != null || R.autoFire || R.autoMine));
-}
-
-// ============ docking bay: the live ship, drawn into its own canvas ============
-function drawDock() {
-  const cv = $('dockc');
-  if (!cv) return;
-  const r = cv.getBoundingClientRect();
-  const w = Math.round(r.width * DPR), h = Math.round(r.height * DPR);
-  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-  const g = cv.getContext('2d');
-  g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  const W2 = r.width, H2 = r.height;
-  const cx = W2 / 2, cy = H2 / 2 + 8;
-
-  // bay backdrop
-  const bg = g.createLinearGradient(0, 0, 0, H2);
-  bg.addColorStop(0, '#0b1d33'); bg.addColorStop(1, '#05070d');
-  g.fillStyle = bg; g.fillRect(0, 0, W2, H2);
-  g.strokeStyle = 'rgba(62,166,255,0.08)'; g.lineWidth = 1;
-  for (let x = 0; x < W2; x += 28) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H2); g.stroke(); }
-  for (let y = 0; y < H2; y += 28) { g.beginPath(); g.moveTo(0, y); g.lineTo(W2, y); g.stroke(); }
-
-  // rotating docking ring and floor glow
-  g.save();
-  g.translate(cx, cy); g.rotate(R.time * 0.15);
-  g.strokeStyle = 'rgba(62,166,255,0.35)'; g.lineWidth = 2; g.setLineDash([12, 10]);
-  g.beginPath(); g.arc(0, 0, Math.min(W2, H2) * 0.42, 0, TAU); g.stroke();
-  g.setLineDash([]);
-  g.restore();
-  const fl = g.createRadialGradient(cx, cy + H2 * 0.3, 0, cx, cy + H2 * 0.3, H2 * 0.6);
-  fl.addColorStop(0, 'rgba(127,255,212,0.16)'); fl.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = fl; g.fillRect(0, 0, W2, H2);
-
-  // ship: reuse the in-flight renderer with temporary state
-  const keep = { x: ship.x, y: ship.y, vx: ship.vx, vy: ship.vy, h: ship.heading, aim: TUR.a, ctx };
-  const nParts = world.parts.length;
-  ctx = g;
-  ship.x = 0; ship.y = 0; ship.vx = 0; ship.vy = 0; ship.heading = -0.35;
-  TUR.a = -0.35 + Math.sin(R.time * 0.7) * 0.6;
-  g.save();
-  g.translate(cx, cy);
-  g.scale(1.8, 1.8);
-  drawShip();
-  g.restore();
-  ctx = keep.ctx;
-  ship.x = keep.x; ship.y = keep.y; ship.vx = keep.vx; ship.vy = keep.vy; ship.heading = keep.h;
-  TUR.a = keep.aim;
-  world.parts.length = nParts;
-
-  // labels
-  g.fillStyle = '#9ee6ff'; g.font = 'bold 11px system-ui'; g.textAlign = 'left';
-  g.fillText('BAY 1 · DOCKED', 12, 18);
-  g.fillStyle = '#7fffd4'; g.textAlign = 'right';
-  g.fillText('● SYSTEMS NOMINAL', W2 - 12, 18);
 }
 
 // ============ panels ============
@@ -1735,6 +2003,59 @@ function closePanel() {
   save();
 }
 
+// ============ docking bay: the live ship drawn into its own canvas ============
+function drawDock() {
+  const cv = $('dockc');
+  if (!cv) return;
+  const r = cv.getBoundingClientRect();
+  const w = Math.round(r.width * DPR), h = Math.round(r.height * DPR);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const g = cv.getContext('2d');
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const W2 = r.width, H2 = r.height;
+  const cx = W2 / 2, cy = H2 / 2 + 8;
+
+  const bg = g.createLinearGradient(0, 0, 0, H2);
+  bg.addColorStop(0, '#0b1d33'); bg.addColorStop(1, '#05070d');
+  g.fillStyle = bg; g.fillRect(0, 0, W2, H2);
+  g.strokeStyle = 'rgba(62,166,255,0.08)'; g.lineWidth = 1;
+  for (let x = 0; x < W2; x += 28) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H2); g.stroke(); }
+  for (let y = 0; y < H2; y += 28) { g.beginPath(); g.moveTo(0, y); g.lineTo(W2, y); g.stroke(); }
+
+  g.save();
+  g.translate(cx, cy); g.rotate(R.time * 0.15);
+  g.strokeStyle = 'rgba(62,166,255,0.35)'; g.lineWidth = 2; g.setLineDash([12, 10]);
+  g.beginPath(); g.arc(0, 0, Math.min(W2, H2) * 0.42, 0, TAU); g.stroke();
+  g.setLineDash([]);
+  g.restore();
+  const fl = g.createRadialGradient(cx, cy + H2 * 0.3, 0, cx, cy + H2 * 0.3, H2 * 0.6);
+  fl.addColorStop(0, 'rgba(127,255,212,0.16)'); fl.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = fl; g.fillRect(0, 0, W2, H2);
+
+  // reuse the in-flight renderer with temporary state
+  const keep = { x: ship.x, y: ship.y, vx: ship.vx, vy: ship.vy, h: ship.heading, aim: TUR.a, waim: WT.a, rec: WT.recoil, ctx };
+  const nParts = world.parts.length;
+  ctx = g;
+  ship.x = 0; ship.y = 0; ship.vx = 0; ship.vy = 0; ship.heading = -0.35;
+  TUR.a = -0.35 + Math.sin(R.time * 0.7) * 0.6;
+  WT.a = -0.35 + Math.sin(R.time * 0.9) * 0.5;
+  WT.recoil = 0;
+  g.save();
+  g.translate(cx, cy);
+  g.scale(1.6, 1.6);
+  drawShip();
+  g.restore();
+  ctx = keep.ctx;
+  ship.x = keep.x; ship.y = keep.y; ship.vx = keep.vx; ship.vy = keep.vy; ship.heading = keep.h;
+  TUR.a = keep.aim; WT.a = keep.waim; WT.recoil = keep.rec;
+  world.parts.length = nParts;
+
+  g.fillStyle = '#9ee6ff'; g.font = 'bold 11px system-ui'; g.textAlign = 'left';
+  g.fillText('BAY 1 · DOCKED', 12, 18);
+  g.fillStyle = '#7fffd4'; g.textAlign = 'right';
+  g.fillText('● SYSTEMS NOMINAL', W2 - 12, 18);
+}
+
 function stationHTML() {
   const s = st();
   const sys = SYS[P.sysId];
@@ -1743,10 +2064,10 @@ function stationHTML() {
     <div class="mbar"><i style="width:${pct(v, m)};background:${c};color:${c}"></i></div>
     <span>${fmt(v)}/${fmt(m)}</span></div>`;
   const stat = (k, v) => `<div class="stat"><span class="dim">${k}</span><b>${v}</b></div>`;
-  const ores = ['veldite', 'krysite'].map(k => {
-    const n = P.cargo[k];
+  const ores = ORE_KEYS.map(k => {
+    const n = P.cargo[k], O = ORE[k];
     return `<div class="ore ${k}">
-      <div><b>${k === 'veldite' ? 'Veldite' : 'Krysite'}</b>
+      <div><b style="color:rgb(${O.vein})">${O.name}</b>
         <div class="dim">${fmt(n)} units · ${unitPrice(k)} cr each</div></div>
       <div class="ovalue">${fmt(n * unitPrice(k))} cr</div>
       <button data-act="sell" data-k="${k}" ${n ? '' : 'disabled'}>Sell all</button></div>`;
@@ -1759,6 +2080,12 @@ function stationHTML() {
     return `<div class="up">
       <div><b>${u.name}</b><div class="dim">${u.desc}</div><div class="pips">${pips(lvl)}</div></div>
       <button data-act="buy" data-k="${u.k}" ${max || P.credits < cost ? 'disabled' : ''}>${max ? 'MAX' : fmt(cost) + ' cr'}</button></div>`;
+  }).join('');
+  const recipes = RECIPES.map(r => {
+    const need = Object.entries(r.need).map(([k, v]) => `${v} ${ORE[k].name}`).join(', ');
+    return `<div class="up">
+      <div><b>${r.name}</b><div class="dim">Uses ${need} + ${fmt(r.cost)} cr</div><div class="dim">${r.desc}</div></div>
+      <button data-act="mfg" data-k="${r.k}" ${canMake(r) ? '' : 'disabled'}>Build</button></div>`;
   }).join('');
   const rCost = Math.ceil((s.hullMax - P.hull) * 3);
   const fCost = Math.ceil((s.fuelMax - P.fuel) * 1.5);
@@ -1783,11 +2110,15 @@ function stationHTML() {
         ${stat('Max hull', s.hullMax)}
         ${stat('Cargo hold', s.cargoMax)}
         ${stat('Fuel tank', s.fuelMax)}
+        ${stat('Missiles', P.items.missile)}
+        ${stat('Mining drones', P.items.mdrone)}
+        ${stat('Combat drones', P.items.cdrone)}
         ${stat('Pirates downed', fmt(P.kills))}
         ${stat('Ore mined', fmt(P.mined))}
       </div>
     </div>
     <div class="sec"><h3>Market</h3>${ores}</div>
+    <div class="sec"><h3>Factory</h3>${recipes}</div>
     <div class="sec"><h3>Services</h3>
       <div class="item"><div><b>Repair</b><div class="dim">Hull and shield to full</div></div>
         <button data-act="repair" ${rCost <= 0 || P.credits < rCost ? 'disabled' : ''}>${rCost > 0 ? fmt(rCost) + ' cr' : 'OK'}</button></div>
@@ -1812,9 +2143,9 @@ function sell(k) {
   const gain = n * unitPrice(k);
   P.credits += gain;
   P.cargo[k] = 0;
-  SND.coin();
   R.fullWarn = false;
-  log(`Sold ${n} ${k} for ${fmt(gain)} cr.`);
+  SND.coin();
+  log(`Sold ${n} ${ORE[k].name} for ${fmt(gain)} cr.`);
 }
 
 function buy(k) {
@@ -1830,6 +2161,17 @@ function buy(k) {
   if (k === 'shield') P.shield = Math.min(s.shMax, P.shield + 30);
   SND.buy();
   log(`Installed ${u.name} Lv ${P.levels[k]}.`);
+}
+
+function manufacture(key) {
+  const r = RECIPES.find(x => x.k === key);
+  if (!r) return;
+  if (!canMake(r)) { SND.error(); log('Missing ore or credits.'); return; }
+  for (const k in r.need) P.cargo[k] -= r.need[k];
+  P.credits -= r.cost;
+  for (const k in r.out) P.items[k] = (P.items[k] || 0) + r.out[k];
+  SND.mfg();
+  log(`Manufactured ${r.name}.`);
 }
 
 function repair() {
@@ -1868,6 +2210,7 @@ $('pbody').addEventListener('click', e => {
   const a = b.dataset.act;
   if (a === 'sell') sell(b.dataset.k);
   else if (a === 'buy') buy(b.dataset.k);
+  else if (a === 'mfg') manufacture(b.dataset.k);
   else if (a === 'repair') repair();
   else if (a === 'refuel') refuel();
   else if (a === 'undock') { closePanel(); return; }
@@ -1990,8 +2333,8 @@ function pick(p) {
     if (d <= 70) consider(d, { kind: 'gate', to: Number(k), ref: pos });
   }
   for (const n of world.npcs) {
-    const d = dist(p, n);
-    if (d <= 34) consider(d, { kind: 'npc', ref: n });
+    const d = dist(p, n) - n.size;
+    if (d <= 14) consider(d, { kind: 'npc', ref: n });
   }
   for (const a of world.asts) {
     const d = dist(p, a) - a.r;
@@ -2082,10 +2425,12 @@ $('bFire').addEventListener('click', () => {
 });
 $('bMine').addEventListener('click', () => {
   R.autoMine = !R.autoMine;
-  SND.click();
   R.fullWarn = false;
+  SND.click();
   log(R.autoMine ? 'Mining laser on. Fly within range of rocks.' : 'Mining laser off.');
 });
+$('bMiss').addEventListener('click', launchMissile);
+$('bDrone').addEventListener('click', deployDrone);
 $('bWarp').addEventListener('click', () => {
   if (R.route != null) { R.route = null; log('Autopilot cancelled.'); return; }
   let best = null, bd = Infinity;
@@ -2126,22 +2471,23 @@ $('bLog').addEventListener('click', () => {
        <button class="wide good" data-act="install">Install Hollow Reach</button>
      </div>
      <div class="sec"><h3>Controls</h3>
-       <p class="tip">Drag in the lower-left to fly. Tap a rock to mine it, a pirate to attack it, the station to dock, or a ring to warp. Use FIRE and MINE to shoot and mine while you fly. Pinch to zoom.</p>
+       <p class="tip">Drag in the lower-left to fly. Tap a rock to mine it, a pirate to attack it, the station to dock, or a ring to warp. FIRE and MINE work while you fly. MISSILE launches a homing warhead at the nearest pirate. DRONE deploys a combat or mining drone. Pinch to zoom.</p>
      </div>
-     <div class="sec"><h3>Journal</h3>${R.msgs.map(m => `<div class="msg"><span class="dim">${m.t}</span> ${m.m}</div>`).join('')}</div>
+     <div class="sec"><h3>Journal</h3>${R.msgs.map(m => `<div class="msg"><span class="dim">${m.t}</span> ${esc(m.m)}</div>`).join('')}</div>
      <button class="wide danger" data-act="reset">Reset universe</button>`);
 });
-
 $('bFire').addEventListener('pointerdown', e => e.stopPropagation());
 
 document.addEventListener('click', e => {
   if (e.target.closest('[data-act="closemap"]')) closePanel();
 });
 
+// ============ docking bay drawing needs the station panel ============
+// (drawDock is called from the loop when the station panel is open)
+
 // ============ updates ============
 const CHANNELS = ['stable', 'beta'];
 const UPD = { latest: null, checkedAt: 0, checking: false, error: null, available: null };
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function channel() { try { return localStorage.getItem('hollowReach.channel') || 'stable'; } catch (e) { return 'stable'; } }
 
 function refreshUpdateBadge() {
@@ -2246,7 +2592,7 @@ $('bUpd').addEventListener('click', () => {
 setTimeout(() => checkUpdates(false), 2500);
 setInterval(() => checkUpdates(false), UPDATE_CHECK_MS);
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && Date.now() - UPD.checkedAt > 10 * 60 * 1000) checkUpdates(false);
+  if (!document.hidden && Date.now() - UPD.checkedAt > UPDATE_CHECK_MS) checkUpdates(false);
 });
 
 // ============ PWA ============
@@ -2277,8 +2623,8 @@ function loop(now) {
 }
 
 populate();
-$('bSnd').textContent = SND.on ? 'Sound on' : 'Sound off';
 ZOOM = BASEZ * U.zoom;
+$('bSnd').textContent = SND.on ? 'Sound on' : 'Sound off';
 log('Welcome to Hollow Reach. Drag to fly. Tap rocks, pirates, the station or rings.');
 hud();
 requestAnimationFrame(loop);

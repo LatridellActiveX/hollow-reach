@@ -1,5 +1,5 @@
 // Hollow Reach service worker: caches the app shell so the game runs offline after the first visit.
-const CACHE = 'hollow-reach-v5';
+const CACHE = 'hollow-reach-v6';
 const ASSETS = [
   './',
   './index.html',
