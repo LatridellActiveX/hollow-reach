@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#05070d" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>Hollow Reach</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#05070d;color:#cfe8ff;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;display:block;touch-action:none}
+#hud{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 8px) 12px 14px;background:linear-gradient(#05070df0,#05070d00);pointer-events:none}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#sysname{font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ee6ff}
+#sec{margin-left:8px;font-weight:700}
+#credits{color:#ffd166;font-variant-numeric:tabular-nums;font-weight:600}
+.bars{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
+.bar{height:8px;background:#0e1a2b;border:1px solid #1d3350;border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;transition:width .2s}
+#bsh{background:#3ea6ff}#bhu{background:#e0524c}#bfu{background:#7fd17f}
+.labels{display:grid;grid-template-columns:1fr 1fr 1fr;font-size:11px;color:#7d97b5;margin-top:2px}
+#status{font-size:12px;color:#7d97b5;margin-top:4px}
+#cargo{font-size:12px;color:#7d97b5;margin-top:4px}
+#bar{position:fixed;left:0;right:0;bottom:0;padding:8px 8px calc(env(safe-area-inset-bottom) + 10px);display:flex;gap:8px;justify-content:center;background:linear-gradient(#05070d00,#05070df0)}
+button{background:#0f2034;color:#cfe8ff;border:1px solid #2a4a6e;border-radius:10px;padding:12px 14px;font:600 14px system-ui;min-width:72px;cursor:pointer}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.35}
+.hide{display:none!important}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 84px);background:#0f2034e6;border:1px solid #2a4a6e;padding:6px 12px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:92vw;text-align:center}
+#toast.show{opacity:1}
+#flash{position:fixed;inset:0;background:#cfe8ff;opacity:0;pointer-events:none;transition:opacity .45s}
+#panel{position:fixed;inset:0;background:#05070ef5;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 12px)}
+.ph{display:flex;justify-content:space-between;align-items:center;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ee6ff;margin-bottom:8px}
+#pbody{flex:1;overflow-y:auto}
+.sec{border-top:1px solid #1d3350;padding:8px 0}
+h3{margin:6px 0;color:#9ee6ff;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+.item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;gap:8px}
+.dim{color:#7d97b5;font-size:12px}
+.wide{width:100%;margin-top:12px}
+.danger{border-color:#6b2a2a;color:#ffb0a8}
+.msg{padding:5px 0;border-bottom:1px solid #101c2e;font-size:13px}
+#mapc{width:100%;height:50vh;display:block;touch-action:none;border:1px solid #1d3350;border-radius:10px;background:#070c16}
+#mapinfo{margin:8px 0;font-size:13px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="row"><div><span id="sysname"></span><span id="sec"></span></div><div id="credits"></div></div>
+  <div class="bars">
+    <div class="bar"><i id="bsh"></i></div>
+    <div class="bar"><i id="bhu"></i></div>
+    <div class="bar"><i id="bfu"></i></div>
+  </div>
+  <div class="labels"><span>Shield</span><span>Hull</span><span>Fuel</span></div>
+  <div class="row"><span id="status"></span><span id="cargo"></span></div>
+</div>
+
+<div id="toast"></div>
+
+<div id="bar">
+  <button id="bMap">Map</button>
+  <button id="bDock">Dock</button>
+  <button id="bStop">Stop</button>
+  <button id="bLog">Log</button>
+</div>
+
+<div id="panel" class="hide">
+  <div class="ph"><span id="ptitle"></span><button id="pclose">Close</button></div>
+  <div id="pbody"></div>
+</div>
+
+<div id="flash"></div>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- constants ----------
+const TAU = Math.PI * 2;
+const GATE_R = 1500;
+const JUMP_FUEL = 10;
+const MINE_RANGE = 170;
+const WEAPON_RANGE = 340;
+const DOCK_RANGE = 110;
+const SAVE_KEY = 'hollowReach.v1';
+
+const UPG = [
+  { k: 'cannon', name: 'Pulse Cannon',      base: 600, desc: '+8 damage per level' },
+  { k: 'mining', name: 'Mining Laser',      base: 500, desc: '+0.8 ore/s per level' },
+  { k: 'shield', name: 'Shield Booster',    base: 500, desc: '+30 max shield per level' },
+  { k: 'armor',  name: 'Armor Plating',     base: 500, desc: '+40 max hull per level' },
+  { k: 'cargo',  name: 'Cargo Hold',        base: 400, desc: '+25 cargo per level' },
+  { k: 'engine', name: 'Afterburner Engine',base: 400, desc: '+30 top speed per level' },
+  { k: 'fuel',   name: 'Fuel Tank',         base: 300, desc: '+40 max fuel per level' },
+];
+
+const NAMES = ['Ketra','Oryn','Vesk','Halden','Murro','Tessaly','Brimm','Caldis','Ixar','Pell','Sorrow','Vantris'];
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = n => Math.floor(n).toLocaleString();
+const pct = (v, m) => clamp((v / m) * 100, 0, 100) + '%';
+function rng(seed) {
+  let s = seed >>> 0 || 1;
+  return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+}
+const secColor = s => s >= 0.7 ? '#3ea6ff' : s >= 0.4 ? '#ffb347' : '#e0524c';
+
+// ---------- galaxy (fixed layout: 3 rows x 4 cols) ----------
+const SYS = (() => {
+  const r = rng(7);
+  const out = [];
+  for (let i = 0; i < 12; i++) {
+    const col = i % 4, row = Math.floor(i / 4);
+    const sec = row === 0 ? +(0.8 + r() * 0.2).toFixed(1)
+              : row === 1 ? +(0.4 + r() * 0.2).toFixed(1)
+              : +(0.1 + r() * 0.25).toFixed(1);
+    out.push({
+      id: i, name: NAMES[i], sec, col, row,
+      mx: col * 200 + 100 + (r() * 30 - 15),
+      my: row * 190 + 100 + (r() * 30 - 15),
+      links: [], gates: {}
+    });
+  }
+  out.forEach(s => {
+    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dc, dr]) => {
+      const c = s.col + dc, rr = s.row + dr;
+      if (c >= 0 && c < 4 && rr >= 0 && rr < 3) s.links.push(rr * 4 + c);
+    });
+  });
+  out.forEach(s => s.links.forEach(n => {
+    const o = out[n];
+    s.gates[n] = Math.atan2(o.my - s.my, o.mx - s.mx);
+  }));
+  return out;
+})();
+
+function path(from, to) {
+  const prev = { [from]: null };
+  const q = [from];
+  while (q.length) {
+    const c = q.shift();
+    if (c === to) break;
+    for (const n of SYS[c].links) if (!(n in prev)) { prev[n] = c; q.push(n); }
+  }
+  if (!(to in prev)) return null;
+  const p = [];
+  let c = to;
+  while (c !== null) { p.unshift(c); c = prev[c]; }
+  return p;
+}
+
+// ---------- persistent state ----------
+function freshState() {
+  return {
+    v: 1, credits: 1000,
+    levels: { cannon: 0, mining: 0, shield: 0, armor: 0, cargo: 0, engine: 0, fuel: 0 },
+    hull: 100, shield: 60, fuel: 100,
+    cargo: { veldite: 0, krysite: 0 },
+    sysId: 0, kills: 0, deaths: 0, mined: 0
+  };
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (d && d.v === 1 && d.s) {
+      const f = freshState();
+      const s = Object.assign(f, d.s);
+      s.levels = Object.assign(f.levels, d.s.levels || {});
+      s.cargo = Object.assign(f.cargo, d.s.cargo || {});
+      if (!SYS[s.sysId]) s.sysId = 0;
+      return s;
+    }
+  } catch (e) {}
+  return freshState();
+}
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, s: P })); } catch (e) {} }
+
+const P = load();
+
+// ---------- runtime state ----------
+const R = {
+  target: null, dest: null, stop: 0, route: null,
+  mineAcc: 0, fireCool: 0, shieldDelay: 0, mining: false,
+  panel: null, saveT: 0, hudT: 0, msgs: []
+};
+const ship = { x: 130, y: 0, vx: 0, vy: 0, heading: 0 };
+const cam = { x: 130, y: 0 };
+const world = { asts: [], npcs: [], beams: [], fx: [], tAst: 0, tPir: 0, timerA: 0, timerP: 0 };
+const stars = Array.from({ length: 150 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() * 1.5 + 0.5, a: Math.random() }));
+
+// ---------- stats ----------
+function st() {
+  const L = P.levels;
+  return {
+    dmg: 18 + 8 * L.cannon,
+    rate: 2.5 + 0.8 * L.mining,
+    shMax: 60 + 30 * L.shield,
+    hullMax: 100 + 40 * L.armor,
+    cargoMax: 50 + 25 * L.cargo,
+    speed: 220 + 30 * L.engine,
+    fuelMax: 100 + 40 * L.fuel,
+    cool: 0.7
+  };
+}
+const cargoUsed = () => P.cargo.veldite + P.cargo.krysite;
+const secOf = () => SYS[P.sysId].sec;
+const unitPrice = k => Math.round((k === 'krysite' ? 42 : 12) * (1 + (1 - secOf()) * 0.6));
+
+// ---------- canvas ----------
+const canvas = $('c');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1, ZOOM = 1;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ZOOM = clamp(Math.min(W, H) / 420, 0.7, 1.4);
+}
+addEventListener('resize', resize);
+resize();
+
+// ---------- feedback ----------
+let toastT = 0;
+function log(m) {
+  R.msgs.unshift({ t: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), m });
+  R.msgs.length = Math.min(R.msgs.length, 80);
+  const t = $('toast');
+  t.textContent = m;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function flash() {
+  const f = $('flash');
+  f.style.opacity = 0.5;
+  setTimeout(() => { f.style.opacity = 0; }, 90);
+}
+
+// ---------- spawning ----------
+function spawnAst() {
+  const sec = secOf();
+  const a = rnd(0, TAU), d = rnd(300, 1250);
+  const kry = Math.random() < (sec < 0.4 ? 0.2 : sec < 0.7 ? 0.07 : 0);
+  const max = kry ? 60 : 140;
+  world.asts.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, r: kry ? 16 : rnd(20, 30), kry, ore: max, max, seed: Math.random() });
+}
+function spawnPir() {
+  const sec = secOf();
+  const keys = Object.keys(SYS[P.sysId].gates);
+  const g = SYS[P.sysId].gates[keys[(Math.random() * keys.length) | 0]];
+  const a = g + rnd(-0.3, 0.3), d = rnd(1150, 1350);
+  const tier = sec < 0.2 ? 3 : sec < 0.4 ? 2 : 1;
+  const hp = 70 + 35 * tier;
+  world.npcs.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, vx: 0, vy: 0, hp, max: hp, tier, fire: rnd(0.5, 1.5), angle: 0 });
+}
+function populate() {
+  const sec = secOf();
+  world.asts = []; world.npcs = []; world.beams = []; world.fx = [];
+  world.tAst = sec >= 0.7 ? 8 : sec >= 0.4 ? 11 : 14;
+  world.tPir = sec >= 0.7 ? 0 : sec >= 0.4 ? 2 : 5;
+  for (let i = 0; i < world.tAst; i++) spawnAst();
+  for (let i = 0; i < world.tPir; i++) spawnPir();
+  world.timerA = 0; world.timerP = 0;
+}
+function updateSpawns(dt) {
+  world.timerA += dt;
+  if (world.timerA > 12 && world.asts.length < world.tAst) { world.timerA = 0; spawnAst(); }
+  world.timerP += dt;
+  if (world.timerP > 25 && world.npcs.length < world.tPir) { world.timerP = 0; spawnPir(); }
+}
+
+// ---------- combat & mining ----------
+function beam(x1, y1, x2, y2, col, life) { world.beams.push({ x1, y1, x2, y2, col, life, max: life }); }
+function explode(x, y) { world.fx.push({ x, y, life: 0.6, max: 0.6, r: 40 }); }
+
+function killNpc(n) {
+  world.npcs = world.npcs.filter(x => x !== n);
+  const bounty = Math.round(150 * n.tier * (1 + (1 - secOf()) * 0.5));
+  P.credits += bounty; P.kills++;
+  explode(n.x, n.y);
+  R.target = null;
+  log(`Pirate destroyed. Bounty ${fmt(bounty)} cr.`);
+}
+
+function removeAst(a) { world.asts = world.asts.filter(x => x !== a); }
+
+function mine(a, dt) {
+  const s = st();
+  if (cargoUsed() >= s.cargoMax) {
+    log('Cargo hold full. Sell ore at a station.');
+    R.target = null; R.mining = false; return;
+  }
+  R.mining = true;
+  R.mineAcc += s.rate * dt;
+  while (R.mineAcc >= 1 && a.ore > 0 && cargoUsed() < s.cargoMax) {
+    R.mineAcc -= 1; a.ore -= 1;
+    P.cargo[a.kry ? 'krysite' : 'veldite']++;
+    P.mined++;
+  }
+  if (a.ore <= 0) {
+    removeAst(a);
+    R.target = null; R.mining = false;
+    log('Asteroid depleted.');
+  }
+}
+
+function hitPlayer(dmg) {
+  R.shieldDelay = 5;
+  const a = Math.min(P.shield, dmg);
+  P.shield -= a; dmg -= a;
+  if (dmg > 0) P.hull -= dmg;
+  if (P.hull <= 0) { die(); return true; }
+  return false;
+}
+
+function die() {
+  P.deaths++;
+  const lost = Math.floor(P.credits * 0.1);
+  P.credits -= lost;
+  P.cargo = { veldite: 0, krysite: 0 };
+  const s = st();
+  P.hull = s.hullMax; P.shield = s.shMax; P.fuel = Math.max(P.fuel, 30);
+  ship.x = 130; ship.y = 0; ship.vx = 0; ship.vy = 0;
+  cam.x = ship.x; cam.y = ship.y;
+  R.target = null; R.dest = null; R.route = null; R.mining = false;
+  populate();
+  flash();
+  log(`Ship destroyed. Clone cost ${fmt(lost)} cr. Cargo lost.`);
+  save();
+}
+
+function stepNpcs(dt) {
+  for (const n of world.npcs) {
+    const dx = ship.x - n.x, dy = ship.y - n.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const ux = dx / d, uy = dy / d;
+    n.angle = Math.atan2(dy, dx);
+    let want = { x: 0, y: 0 };
+    if (d < 900) {
+      if (d > 240) want = { x: ux * 160, y: uy * 160 };
+      else want = { x: -uy * 150 - ux * (230 - d) * 0.8, y: ux * 150 - uy * (230 - d) * 0.8 };
+    }
+    n.vx += (want.x - n.vx) * Math.min(1, dt * 2.5);
+    n.vy += (want.y - n.vy) * Math.min(1, dt * 2.5);
+    n.x += n.vx * dt; n.y += n.vy * dt;
+    n.fire -= dt;
+    if (d < 260 && n.fire <= 0) {
+      n.fire = 1.4;
+      const dmg = (6 + n.tier * 4) * rnd(0.8, 1.2);
+      beam(n.x, n.y, ship.x, ship.y, '#ff6b6b', 0.12);
+      if (hitPlayer(dmg)) return;
+    }
+  }
+}
+
+// ---------- navigation ----------
+function gatePos(to) {
+  const a = SYS[P.sysId].gates[to];
+  return { x: Math.cos(a) * GATE_R, y: Math.sin(a) * GATE_R };
+}
+
+function doJump(to) {
+  if (P.fuel < JUMP_FUEL) {
+    log('Insufficient fuel for warp. Refuel at a station.');
+    R.target = null; R.route = null;
+    return false;
+  }
+  const from = P.sysId;
+  P.fuel -= JUMP_FUEL;
+  P.sysId = to;
+  const a = SYS[to].gates[from];
+  ship.x = Math.cos(a) * 1300; ship.y = Math.sin(a) * 1300;
+  ship.vx = 0; ship.vy = 0;
+  cam.x = ship.x; cam.y = ship.y;
+  R.target = null; R.dest = null; R.mining = false;
+  flash();
+  populate();
+  log(`Warped to ${SYS[to].name} (sec ${SYS[to].sec.toFixed(1)}).`);
+  save();
+  return true;
+}
+
+function updateRoute() {
+  if (R.route == null) return;
+  if (R.route === P.sysId) { R.route = null; log('Arrived at destination.'); return; }
+  if (R.target) return;
+  const p = path(P.sysId, R.route);
+  if (!p || p.length < 2) { R.route = null; return; }
+  const to = p[1];
+  R.target = { kind: 'gate', to, ref: gatePos(to) };
+}
+
+function dock() {
+  R.target = null; R.dest = null; R.route = null;
+  ship.vx = 0; ship.vy = 0;
+  save();
+  openStation();
+}
+
+function updateTarget(dt) {
+  const t = R.target;
+  if (!t) return;
+  const d = Math.hypot(t.ref.x - ship.x, t.ref.y - ship.y);
+  const s = st();
+  switch (t.kind) {
+    case 'ast':
+      if (!world.asts.includes(t.ref)) { R.target = null; R.mining = false; return; }
+      R.dest = t.ref; R.stop = MINE_RANGE * 0.7;
+      if (d <= MINE_RANGE) mine(t.ref, dt); else R.mining = false;
+      break;
+    case 'npc':
+      if (!world.npcs.includes(t.ref)) { R.target = null; return; }
+      R.dest = t.ref; R.stop = WEAPON_RANGE * 0.8;
+      if (d <= WEAPON_RANGE && R.fireCool <= 0) {
+        R.fireCool = s.cool;
+        const dmg = s.dmg * rnd(0.9, 1.1);
+        t.ref.hp -= dmg;
+        beam(ship.x, ship.y, t.ref.x, t.ref.y, '#9ee6ff', 0.1);
+        if (t.ref.hp <= 0) killNpc(t.ref);
+      }
+      break;
+    case 'station':
+      R.dest = { x: 0, y: 0 }; R.stop = 60;
+      if (d <= DOCK_RANGE) dock();
+      break;
+    case 'gate':
+      R.dest = t.ref; R.stop = 20;
+      if (d <= 70) { doJump(t.to); R.target = null; }
+      break;
+  }
+}
+
+function updateShip(dt) {
+  const s = st();
+  const accel = s.speed * 1.3;
+  let steering = false;
+  const d = R.dest;
+  if (d) {
+    const dx = d.x - ship.x, dy = d.y - ship.y;
+    const dd = Math.hypot(dx, dy);
+    if (dd > R.stop + 3) {
+      steering = true;
+      const ux = dx / dd, uy = dy / dd;
+      const want = Math.min(s.speed, (dd - R.stop) * 1.6 + 20);
+      const tvx = ux * want, tvy = uy * want;
+      const ax = tvx - ship.vx, ay = tvy - ship.vy;
+      const am = Math.hypot(ax, ay), m = accel * dt;
+      if (am > m) { ship.vx += ax / am * m; ship.vy += ay / am * m; }
+      else { ship.vx = tvx; ship.vy = tvy; }
+    } else if (!R.target) {
+      R.dest = null;
+    }
+  }
+  if (!steering) {
+    const f = Math.max(0, 1 - dt * 2.5);
+    ship.vx *= f; ship.vy *= f;
+  }
+  ship.x += ship.vx * dt; ship.y += ship.vy * dt;
+  const rr = Math.hypot(ship.x, ship.y);
+  if (rr > 1900) {
+    const k = 1900 / rr;
+    ship.x *= k; ship.y *= k; ship.vx *= 0.5; ship.vy *= 0.5;
+  }
+  if (Math.hypot(ship.vx, ship.vy) > 5) ship.heading = Math.atan2(ship.vy, ship.vx);
+}
+
+function step(dt) {
+  R.fireCool -= dt;
+  if (R.shieldDelay > 0) R.shieldDelay -= dt;
+  else P.shield = Math.min(st().shMax, P.shield + 10 * dt);
+  updateSpawns(dt);
+  updateRoute();
+  updateTarget(dt);
+  updateShip(dt);
+  stepNpcs(dt);
+  world.beams.forEach(b => b.life -= dt);
+  world.beams = world.beams.filter(b => b.life > 0);
+  world.fx.forEach(f => f.life -= dt);
+  world.fx = world.fx.filter(f => f.life > 0);
+  cam.x += (ship.x - cam.x) * Math.min(1, dt * 8);
+  cam.y += (ship.y - cam.y) * Math.min(1, dt * 8);
+  R.saveT += dt;
+  if (R.saveT > 5) { R.saveT = 0; save(); }
+  R.hudT += dt;
+  if (R.hudT > 0.1) { R.hudT = 0; hud(); }
+}
+
+// ---------- drawing ----------
+function drawStars() {
+  ctx.fillStyle = '#ffffff';
+  for (const s of stars) {
+    const x = ((s.x * W - cam.x * 0.12 * ZOOM) % W + W) % W;
+    const y = ((s.y * H - cam.y * 0.12 * ZOOM) % H + H) % H;
+    ctx.globalAlpha = 0.3 + 0.6 * s.a;
+    ctx.fillRect(x, y, s.s, s.s);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawGates() {
+  const sys = SYS[P.sysId];
+  ctx.textAlign = 'center';
+  for (const k in sys.gates) {
+    const to = SYS[k];
+    const a = sys.gates[k];
+    const x = Math.cos(a) * GATE_R, y = Math.sin(a) * GATE_R;
+    const col = secColor(to.sec);
+    ctx.strokeStyle = col; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y, 48, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 0.15; ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(x, y, 48, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = col; ctx.font = 'bold 13px system-ui';
+    ctx.fillText(to.name, x, y - 62);
+    ctx.font = '11px system-ui';
+    ctx.fillText('sec ' + to.sec.toFixed(1), x, y + 66);
+  }
+}
+
+function drawStation() {
+  ctx.strokeStyle = '#3ea6ff'; ctx.lineWidth = 3; ctx.fillStyle = '#0f2236';
+  ctx.beginPath(); ctx.arc(0, 0, 46, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, 26, 0, TAU); ctx.stroke();
+  ctx.save();
+  ctx.rotate(performance.now() / 9000);
+  ctx.fillStyle = '#3ea6ff';
+  for (let i = 0; i < 4; i++) { ctx.rotate(TAU / 4); ctx.fillRect(40, -4, 22, 8); }
+  ctx.restore();
+  ctx.fillStyle = '#9ee6ff'; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('STATION', 0, -60);
+}
+
+function drawAsteroids() {
+  for (const a of world.asts) {
+    ctx.globalAlpha = 0.35 + 0.65 * (a.ore / a.max);
+    ctx.fillStyle = a.kry ? '#4fd6c7' : '#8a7757';
+    ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = a.kry ? '#1a4a48' : '#2a2418';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, TAU); ctx.stroke();
+  }
+}
+
+function drawNpcs() {
+  for (const n of world.npcs) {
+    ctx.save();
+    ctx.translate(n.x, n.y);
+    ctx.rotate(n.angle + Math.PI / 2);
+    ctx.fillStyle = '#e0524c';
+    ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(12, 12); ctx.lineTo(-12, 12); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    const w = 40;
+    ctx.fillStyle = '#3a1212'; ctx.fillRect(n.x - w / 2, n.y - 30, w, 5);
+    ctx.fillStyle = '#e0524c'; ctx.fillRect(n.x - w / 2, n.y - 30, w * clamp(n.hp / n.max, 0, 1), 5);
+  }
+}
+
+function drawBeams() {
+  for (const b of world.beams) {
+    ctx.globalAlpha = clamp(b.life / b.max, 0, 1);
+    ctx.strokeStyle = b.col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  if (R.mining && R.target && R.target.kind === 'ast') {
+    const a = R.target.ref;
+    ctx.strokeStyle = '#7fffd4'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(ship.x, ship.y); ctx.lineTo(a.x, a.y); ctx.stroke();
+  }
+}
+
+function drawFx() {
+  for (const f of world.fx) {
+    const p = 1 - f.life / f.max;
+    ctx.globalAlpha = f.life / f.max;
+    ctx.strokeStyle = '#ff9e6b'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r * p + 6, 0, TAU); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawShip() {
+  ctx.save();
+  ctx.translate(ship.x, ship.y);
+  ctx.rotate(ship.heading);
+  const sp = Math.hypot(ship.vx, ship.vy);
+  if (sp > 25) {
+    ctx.fillStyle = '#ffb347';
+    ctx.beginPath(); ctx.moveTo(-10, -4); ctx.lineTo(-10 - sp * 0.04, 0); ctx.lineTo(-10, 4); ctx.fill();
+  }
+  ctx.fillStyle = '#9ee6ff';
+  ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-10, -10); ctx.lineTo(-6, 0); ctx.lineTo(-10, 10); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawTargetRing() {
+  if (!R.target) return;
+  const t = R.target;
+  const r = t.kind === 'ast' ? t.ref.r + 8 : t.kind === 'npc' ? 22 : t.kind === 'station' ? 52 : 56;
+  ctx.setLineDash([6, 6]);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(t.ref.x, t.ref.y, r, 0, TAU); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function draw() {
+  ctx.fillStyle = '#05070d';
+  ctx.fillRect(0, 0, W, H);
+  drawStars();
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(ZOOM, ZOOM);
+  ctx.translate(-cam.x, -cam.y);
+  ctx.font = 'bold 13px system-ui';
+  drawGates();
+  drawStation();
+  drawAsteroids();
+  drawNpcs();
+  drawBeams();
+  drawFx();
+  drawShip();
+  drawTargetRing();
+  ctx.restore();
+}
+
+// ---------- HUD ----------
+function statusText() {
+  if (R.mining && R.target) return 'Mining ' + (R.target.ref.kry ? 'Krysite' : 'Veldite');
+  if (R.target) {
+    const k = R.target.kind;
+    if (k === 'npc') return 'Engaging pirate';
+    if (k === 'ast') return 'Approaching asteroid';
+    if (k === 'gate') return 'Warping to ' + SYS[R.target.to].name;
+    return 'Docking';
+  }
+  if (R.route != null) return 'Autopilot to ' + SYS[R.route].name;
+  return R.dest ? 'Moving' : 'Idle';
+}
+
+function hud() {
+  const s = st();
+  const sys = SYS[P.sysId];
+  $('sysname').textContent = sys.name;
+  $('sec').textContent = sys.sec.toFixed(1);
+  $('sec').style.color = secColor(sys.sec);
+  $('credits').textContent = fmt(P.credits) + ' cr';
+  $('bsh').style.width = pct(P.shield, s.shMax);
+  $('bhu').style.width = pct(P.hull, s.hullMax);
+  $('bfu').style.width = pct(P.fuel, s.fuelMax);
+  $('cargo').textContent = `Cargo ${cargoUsed()}/${s.cargoMax}`;
+  $('status').textContent = R.panel ? '' : statusText();
+  $('bStop').classList.toggle('hide', !(R.target || R.dest || R.route != null));
+}
+
+// ---------- panels ----------
+function openPanel(kind, title, html) {
+  R.panel = kind;
+  $('ptitle').textContent = title;
+  $('pbody').innerHTML = html;
+  $('panel').classList.remove('hide');
+}
+
+function closePanel() {
+  const was = R.panel;
+  R.panel = null;
+  $('panel').classList.add('hide');
+  if (was === 'station') {
+    const d = Math.hypot(ship.x, ship.y);
+    if (d < 130) {
+      const a = Math.atan2(ship.y, ship.x);
+      ship.x = Math.cos(a) * 130; ship.y = Math.sin(a) * 130;
+    }
+  }
+  save();
+}
+
+function stationHTML() {
+  const s = st();
+  const ores = ['veldite', 'krysite'].map(k => {
+    const n = P.cargo[k];
+    return `<div class="item"><div><b>${k === 'veldite' ? 'Veldite' : 'Krysite'}</b> <span class="dim">x${n}</span><div class="dim">${unitPrice(k)} cr/unit</div></div>
+      <button data-act="sell" data-k="${k}" ${n ? '' : 'disabled'}>Sell all</button></div>`;
+  }).join('');
+  const ups = UPG.map(u => {
+    const lvl = P.levels[u.k];
+    const max = lvl >= 5;
+    const cost = u.base * (lvl + 1);
+    return `<div class="item"><div><b>${u.name}</b> <span class="dim">Lv ${lvl}/5</span><div class="dim">${u.desc}</div></div>
+      <button data-act="buy" data-k="${u.k}" ${max || P.credits < cost ? 'disabled' : ''}>${max ? 'MAX' : fmt(cost) + ' cr'}</button></div>`;
+  }).join('');
+  const rCost = Math.ceil((s.hullMax - P.hull) * 3);
+  const fCost = Math.ceil((s.fuelMax - P.fuel) * 1.5);
+  return `
+    <div class="sec"><h3>Market</h3>${ores}</div>
+    <div class="sec"><h3>Hangar</h3>${ups}</div>
+    <div class="sec"><h3>Services</h3>
+      <div class="item"><div><b>Repair</b><div class="dim">Hull ${fmt(P.hull)}/${s.hullMax}, shield ${fmt(P.shield)}/${s.shMax}</div></div>
+        <button data-act="repair" ${rCost <= 0 || P.credits < rCost ? 'disabled' : ''}>${rCost > 0 ? fmt(rCost) + ' cr' : 'OK'}</button></div>
+      <div class="item"><div><b>Refuel</b><div class="dim">${fmt(P.fuel)}/${s.fuelMax}</div></div>
+        <button data-act="refuel" ${fCost <= 0 || P.credits < fCost ? 'disabled' : ''}>${fCost > 0 ? fmt(fCost) + ' cr' : 'OK'}</button></div>
+    </div>
+    <button class="wide" data-act="undock">Undock</button>`;
+}
+
+function openStation() {
+  openPanel('station', SYS[P.sysId].name + ' Station', stationHTML());
+}
+
+function refreshStation() {
+  if (R.panel === 'station') $('pbody').innerHTML = stationHTML();
+}
+
+function sell(k) {
+  const n = P.cargo[k];
+  if (!n) return;
+  const gain = n * unitPrice(k);
+  P.credits += gain;
+  P.cargo[k] = 0;
+  log(`Sold ${n} ${k} for ${fmt(gain)} cr.`);
+}
+
+function buy(k) {
+  const u = UPG.find(x => x.k === k);
+  const lvl = P.levels[k];
+  if (lvl >= 5) return;
+  const cost = u.base * (lvl + 1);
+  if (P.credits < cost) return;
+  P.credits -= cost;
+  P.levels[k]++;
+  const s = st();
+  if (k === 'armor') P.hull = Math.min(s.hullMax, P.hull + 40);
+  if (k === 'shield') P.shield = Math.min(s.shMax, P.shield + 30);
+  log(`Installed ${u.name} Lv ${P.levels[k]}.`);
+}
+
+function repair() {
+  const s = st();
+  const cost = Math.ceil((s.hullMax - P.hull) * 3);
+  if (cost <= 0 || P.credits < cost) return;
+  P.credits -= cost;
+  P.hull = s.hullMax; P.shield = s.shMax;
+  log(`Hull repaired for ${fmt(cost)} cr.`);
+}
+
+function refuel() {
+  const s = st();
+  const cost = Math.ceil((s.fuelMax - P.fuel) * 1.5);
+  if (cost <= 0 || P.credits < cost) return;
+  P.credits -= cost;
+  P.fuel = s.fuelMax;
+  log(`Refueled for ${fmt(cost)} cr.`);
+}
+
+$('pbody').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  const a = b.dataset.act;
+  if (a === 'sell') sell(b.dataset.k);
+  else if (a === 'buy') buy(b.dataset.k);
+  else if (a === 'repair') repair();
+  else if (a === 'refuel') refuel();
+  else if (a === 'undock') { closePanel(); return; }
+  else if (a === 'clearroute') { R.route = null; log('Route cleared.'); openMap(); return; }
+  else if (a === 'reset') {
+    if (confirm('Erase all Hollow Reach progress?')) { localStorage.removeItem(SAVE_KEY); location.reload(); }
+    return;
+  }
+  save();
+  refreshStation();
+});
+
+$('pclose').addEventListener('click', closePanel);
+
+// ---------- map ----------
+let mapPos = [];
+function openMap() {
+  openPanel('map', 'Galaxy Map',
+    `<canvas id="mapc"></canvas>
+     <div id="mapinfo" class="dim"></div>
+     <div class="row"><button data-act="clearroute">Clear route</button><button data-act="closemap">Close</button></div>`);
+  const cv = $('mapc');
+  cv.addEventListener('pointerdown', e => {
+    const r = cv.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    let best = -1, bd = 26;
+    mapPos.forEach((p, i) => {
+      const d = Math.hypot(p[0] - mx, p[1] - my);
+      if (d < bd) { bd = d; best = i; }
+    });
+    if (best < 0) return;
+    if (best === P.sysId) { R.route = null; log('Route cleared.'); closePanel(); return; }
+    R.route = best;
+    R.target = null; R.dest = null;
+    const p = path(P.sysId, best);
+    log(`Route plotted: ${p ? p.length - 1 : '?'} jump(s) to ${SYS[best].name}.`);
+    closePanel();
+  });
+  drawMap();
+}
+
+function drawMap() {
+  const cv = $('mapc');
+  if (!cv) return;
+  const r = cv.getBoundingClientRect();
+  cv.width = r.width * DPR; cv.height = r.height * DPR;
+  const g = cv.getContext('2d');
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.fillStyle = '#070c16'; g.fillRect(0, 0, r.width, r.height);
+
+  let minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+  for (const s of SYS) {
+    minx = Math.min(minx, s.mx); maxx = Math.max(maxx, s.mx);
+    miny = Math.min(miny, s.my); maxy = Math.max(maxy, s.my);
+  }
+  const pad = 36;
+  const sc = Math.min((r.width - pad * 2) / (maxx - minx), (r.height - pad * 2) / (maxy - miny));
+  mapPos = SYS.map(s => [pad + (s.mx - minx) * sc, pad + (s.my - miny) * sc]);
+
+  const route = R.route != null ? path(P.sysId, R.route) : null;
+  const onRoute = (a, b) => {
+    if (!route) return false;
+    for (let i = 1; i < route.length; i++) {
+      const x = route[i - 1], y = route[i];
+      if ((x === a && y === b) || (x === b && y === a)) return true;
+    }
+    return false;
+  };
+
+  g.lineWidth = 2;
+  for (const s of SYS) for (const n of s.links) {
+    if (n < s.id) continue;
+    const [x1, y1] = mapPos[s.id], [x2, y2] = mapPos[n];
+    g.strokeStyle = onRoute(s.id, n) ? '#ffd166' : '#22405f';
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+  }
+  SYS.forEach(s => {
+    const [x, y] = mapPos[s.id];
+    const cur = s.id === P.sysId, tgt = s.id === R.route;
+    g.fillStyle = secColor(s.sec);
+    g.beginPath(); g.arc(x, y, cur ? 14 : 11, 0, TAU); g.fill();
+    if (cur) { g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 20, 0, TAU); g.stroke(); }
+    if (tgt) { g.strokeStyle = '#ffd166'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 26, 0, TAU); g.stroke(); }
+    g.textAlign = 'center';
+    g.fillStyle = '#cfe8ff'; g.font = 'bold 12px system-ui';
+    g.fillText(s.name, x, y - 24);
+    g.fillStyle = '#7d97b5'; g.font = '11px system-ui';
+    g.fillText('sec ' + s.sec.toFixed(1), x, y + 32);
+  });
+
+  const info = $('mapinfo');
+  if (info) {
+    info.textContent = route
+      ? `Route: ${route.length - 1} jump(s) to ${SYS[R.route].name}. Autopilot warps through gates.`
+      : 'Tap a system to plot an autopilot route. Current system is ringed.';
+  }
+}
+
+// ---------- input ----------
+function toWorld(x, y) {
+  return { x: (x - W / 2) / ZOOM + cam.x, y: (y - H / 2) / ZOOM + cam.y };
+}
+
+function pick(p) {
+  const tol = 34 / ZOOM;
+  let best = null, bd = tol;
+  const consider = (d, obj) => { if (d < bd) { bd = d; best = obj; } };
+  const ds = Math.hypot(p.x, p.y);
+  if (ds <= 60) consider(ds, { kind: 'station', ref: { x: 0, y: 0 } });
+  for (const k in SYS[P.sysId].gates) {
+    const pos = gatePos(Number(k));
+    const d = dist(p, pos);
+    if (d <= 60) consider(d, { kind: 'gate', to: Number(k), ref: pos });
+  }
+  for (const n of world.npcs) {
+    const d = dist(p, n);
+    if (d <= 30) consider(d, { kind: 'npc', ref: n });
+  }
+  for (const a of world.asts) {
+    const d = dist(p, a) - a.r;
+    if (d <= 20) consider(d, { kind: 'ast', ref: a });
+  }
+  return best;
+}
+
+canvas.addEventListener('pointerdown', e => {
+  if (R.panel) return;
+  const p = toWorld(e.clientX, e.clientY);
+  const hit = pick(p);
+  R.route = null;
+  if (!hit) {
+    R.target = null; R.mining = false;
+    R.dest = { x: p.x, y: p.y }; R.stop = 0;
+    return;
+  }
+  R.target = hit;
+  R.mining = false;
+  R.dest = hit.ref; R.stop = 0;
+});
+
+$('bMap').addEventListener('click', openMap);
+$('bLog').addEventListener('click', () => {
+  openPanel('log', 'Log',
+    R.msgs.map(m => `<div class="msg"><span class="dim">${m.t}</span> ${m.m}</div>`).join('') +
+    `<button class="wide danger" data-act="reset">Reset universe</button>`);
+});
+$('bDock').addEventListener('click', () => {
+  R.route = null;
+  R.target = { kind: 'station', ref: { x: 0, y: 0 } };
+  R.mining = false;
+  R.dest = R.target.ref; R.stop = 60;
+});
+$('bStop').addEventListener('click', () => {
+  R.target = null; R.dest = null; R.route = null; R.mining = false;
+  log('Stopped.');
+});
+
+// map buttons inside panel also route through data-act; closemap handled here
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act="closemap"]');
+  if (b) closePanel();
+});
+
+// ---------- loop ----------
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+  last = now;
+  if (R.panel !== 'station' && R.panel !== 'map') step(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+populate();
+log('Welcome to Hollow Reach. Tap rocks to mine, ships to attack, the station to dock, rings to warp.');
+hud();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
