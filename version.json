@@ -1,11 +1,16 @@
 {
   "channels": {
     "stable": {
-      "version": "1.4.0",
-      "build": 5,
+      "version": "1.5.0",
+      "build": 6,
       "date": "2026-10-21",
       "url": "./",
       "notes": [
+        "Studio-style flight audio: layered engine roar, air rush, reverb and an afterburn whoosh",
+        "Ship modules: buy shields, nanites, overdrive, salvage magnets and more with icons, 4 slots",
+        "Compact glass HUD with shield, hull and fuel gauges and an icon action bar",
+        "Cargo Hold screen with per-ore sales and a hold that holds up to 950 units",
+        "Fixed corrupt save values that could cause NaN in sales; ferrum rocks are now rust-orange and easier to see",
         "Missiles: homing warheads launched from wing racks with the MISSILE button",
         "Drones: combat and mining drones with the DRONE button (up to 4 deployed)",
         "Enemy scouts, raiders and cruisers with turrets that track and fire at you",
@@ -16,6 +21,22 @@
         "Update check runs every 5 minutes"
       ],
       "history": [
+        {
+          "version": "1.4.0",
+          "build": 5,
+          "date": "2026-10-21",
+          "notes": [
+            "Missiles: homing warheads launched from wing racks with the MISSILE button",
+            "Drones: combat and mining drones with the DRONE button (up to 4 deployed)",
+            "Enemy scouts, raiders and cruisers with turrets that track and fire at you",
+            "Five ore types: Ferrum, Veldite, Azurite, Krysite and Hollowite, spawned by security",
+            "Factory on the station: build missiles and drones from ore and credits",
+            "Mining laser now hums while it cuts and crackles on every chip",
+            "Larger ship with swiveling weapon turrets on each wing",
+            "Update check runs every 5 minutes",
+            "Redesigned station with solar wings, docking cradles and a lit habitat ring"
+          ]
+        },
         {
           "version": "1.3.0",
           "build": 4,
