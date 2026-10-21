@@ -945,28 +945,155 @@ function drawStation() {
 
 function drawPlanetRingsPlaceholder() {}
 
+// per-asteroid surface detail, generated once from its position so it stays stable
+function asteroidDetail(a) {
+  const r = rng(Math.floor(Math.abs(a.x) * 13 + Math.abs(a.y) * 7) + 17);
+  const craters = [], veins = [], shards = [], cracks = [];
+  const nC = 4 + Math.floor(r() * 5);
+  for (let i = 0; i < nC; i++) {
+    const ang = r() * TAU, d = r() * a.r * 0.6;
+    craters.push({ x: Math.cos(ang) * d, y: Math.sin(ang) * d, r: a.r * (0.08 + r() * 0.14) });
+  }
+  const nV = 2 + Math.floor(r() * 3);
+  for (let i = 0; i < nV; i++) {
+    const ang = r() * TAU;
+    let x = Math.cos(ang) * a.r * 0.3, y = Math.sin(ang) * a.r * 0.3;
+    const line = [[x, y]];
+    for (let j = 0; j < 3; j++) {
+      x += (r() - 0.5) * a.r * 0.6; y += (r() - 0.5) * a.r * 0.6;
+      line.push([x, y]);
+    }
+    veins.push(line);
+  }
+  if (a.kry) {
+    const nS = 5 + Math.floor(r() * 4);
+    for (let i = 0; i < nS; i++) {
+      const ang = r() * TAU, d = r() * a.r * 0.55;
+      shards.push({
+        x: Math.cos(ang) * d, y: Math.sin(ang) * d, a: r() * TAU,
+        len: a.r * (0.25 + r() * 0.3), w: a.r * (0.08 + r() * 0.06), ph: r() * TAU
+      });
+    }
+  }
+  for (let i = 0; i < 6; i++) {
+    const ang = r() * TAU;
+    const p0 = [Math.cos(ang) * a.r * 0.15, Math.sin(ang) * a.r * 0.15];
+    const p1 = [Math.cos(ang + (r() - 0.5)) * a.r * 0.55, Math.sin(ang + (r() - 0.5)) * a.r * 0.55];
+    const p2 = [Math.cos(ang + (r() - 0.5) * 0.6) * a.r * 0.95, Math.sin(ang + (r() - 0.5) * 0.6) * a.r * 0.95];
+    cracks.push([p0, p1, p2]);
+  }
+  return { craters, veins, shards, cracks };
+}
+
 function drawAsteroids() {
   for (const a of world.asts) {
+    if (!a.det) a.det = asteroidDetail(a);
+    const D = a.det;
+    const f = clamp(a.ore / a.max, 0, 1);
+    const kry = a.kry;
+    const hi = kry ? '#c4fff7' : '#ead3a6';
+    const mid = kry ? '#2f9a90' : '#7d6848';
+    const lo = kry ? '#0a2e2b' : '#241d12';
+    const vein = kry ? '120,255,240' : '255,190,90';
+
     ctx.save();
     ctx.translate(a.x, a.y);
+
+    // cast shadow, away from the upper-left light
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(a.r * 0.3, a.r * 0.35, a.r * 1.05, a.r * 0.9, 0, 0, TAU); ctx.fill();
+
     ctx.rotate(a.rot);
-    const base = a.kry ? '#4fd6c7' : '#8a7757';
-    const dark = a.kry ? '#1a4a48' : '#2a2418';
-    const g = ctx.createRadialGradient(-a.r * 0.4, -a.r * 0.4, a.r * 0.1, 0, 0, a.r * 1.1);
-    g.addColorStop(0, base); g.addColorStop(1, dark);
-    ctx.globalAlpha = 0.45 + 0.55 * (a.ore / a.max);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    a.pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
-    ctx.closePath(); ctx.fill();
-    ctx.lineWidth = 1.5; ctx.strokeStyle = dark; ctx.stroke();
-    if (a.kry) {
-      ctx.fillStyle = '#b8fff4';
-      ctx.globalAlpha = 0.5 + 0.4 * Math.sin(R.time * 3 + a.x);
-      ctx.beginPath(); ctx.arc(a.r * 0.2, -a.r * 0.2, 2.2, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.6 + 0.4 * f;
+
+    // body with lit-from-upper-left shading
+    const g = ctx.createRadialGradient(a.r * -0.4, a.r * -0.4, a.r * 0.05, 0, 0, a.r * 1.2);
+    g.addColorStop(0, hi); g.addColorStop(0.5, mid); g.addColorStop(1, lo);
+    polyPath(a.pts); ctx.fillStyle = g; ctx.fill();
+
+    // faceted wedges give the rock a chiseled look
+    for (let i = 0; i < a.pts.length; i++) {
+      const p = a.pts[i], q = a.pts[(i + 1) % a.pts.length];
+      ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.16)';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.closePath(); ctx.fill();
+    }
+
+    // rim light on the lit edge, then the dark outline
+    ctx.save();
+    ctx.translate(-0.9, -0.9);
+    polyPath(a.pts); ctx.strokeStyle = 'rgba(255,245,220,0.45)'; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.restore();
+    polyPath(a.pts); ctx.strokeStyle = lo; ctx.lineWidth = 1.3; ctx.stroke();
+
+    // craters: dark bowl with a lit lower rim
+    for (const c of D.craters) {
+      ctx.fillStyle = 'rgba(20,14,8,0.45)';
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,240,210,0.22)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(c.x + 0.5, c.y + 0.5, c.r, 0.2 * Math.PI, 1.0 * Math.PI); ctx.stroke();
+    }
+
+    // glowing ore veins, brighter with more ore left
+    ctx.lineCap = 'round';
+    for (const v of D.veins) {
+      ctx.beginPath();
+      v.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+      ctx.strokeStyle = `rgba(${vein},${0.1 + 0.2 * f})`; ctx.lineWidth = 4; ctx.stroke();
+      ctx.strokeStyle = `rgba(${vein},${0.4 + 0.5 * f})`; ctx.lineWidth = 1.3; ctx.stroke();
+    }
+
+    // krysite crystal shards with a slow twinkle
+    if (kry) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (const s of D.shards) {
+        const tw = 0.6 + 0.4 * Math.sin(R.time * 2.5 + s.ph);
+        ctx.save();
+        ctx.translate(s.x, s.y); ctx.rotate(s.a);
+        const cg = ctx.createLinearGradient(0, -s.w, 0, s.w);
+        cg.addColorStop(0, `rgba(210,255,250,${0.9 * tw})`);
+        cg.addColorStop(1, 'rgba(60,220,200,0.2)');
+        polyPath([[s.len, 0], [0, -s.w], [-s.len * 0.3, 0], [0, s.w]]);
+        ctx.fillStyle = cg; ctx.fill();
+        ctx.restore();
+        if (tw > 0.92) {
+          const tx = s.x + Math.cos(s.a) * s.len, ty = s.y + Math.sin(s.a) * s.len;
+          const sg = ctx.createRadialGradient(tx, ty, 0, tx, ty, 5);
+          sg.addColorStop(0, 'rgba(255,255,255,0.9)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(tx, ty, 5, 0, TAU); ctx.fill();
+        }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // depletion cracks appear as the rock is mined out
+    const crackN = Math.round((1 - f) * D.cracks.length);
+    ctx.strokeStyle = 'rgba(15,10,5,0.75)'; ctx.lineWidth = 1;
+    for (let i = 0; i < crackN; i++) {
+      const c = D.cracks[i];
+      ctx.beginPath();
+      c.forEach((p, j) => (j ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+      ctx.stroke();
+    }
+
+    // impact glow where the mining laser hits
+    if (R.mining && R.mineRef === a) {
+      const ang = Math.atan2(ship.y - a.y, ship.x - a.x) - a.rot;
+      const ix = Math.cos(ang) * a.r * 0.9, iy = Math.sin(ang) * a.r * 0.9;
+      const ig = ctx.createRadialGradient(ix, iy, 0, ix, iy, 12);
+      ig.addColorStop(0, kry ? 'rgba(180,255,245,0.9)' : 'rgba(255,230,160,0.9)');
+      ig.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(ix, iy, 12, 0, TAU); ctx.fill();
+    }
+
+    // ore-remaining ring when you're close
+    ctx.lineCap = 'butt';
+    ctx.globalAlpha = 1;
+    if (dist(ship, a) < 320) {
+      ctx.strokeStyle = kry ? 'rgba(127,255,212,0.55)' : 'rgba(255,220,150,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, a.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * f); ctx.stroke();
     }
     ctx.restore();
-    ctx.globalAlpha = 1;
   }
 }
 
