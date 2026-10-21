@@ -1226,36 +1226,122 @@ function drawGates() {
 
 function drawStation() {
   const t = R.time;
-  const hg = ctx.createRadialGradient(0, 0, 40, 0, 0, 130);
-  hg.addColorStop(0, 'rgba(62,166,255,0.35)'); hg.addColorStop(1, 'rgba(62,166,255,0)');
-  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, 130, 0, TAU); ctx.fill();
+  const acc = secColorOf(P.sysId);
+
+  // atmosphere halo
+  const hg = ctx.createRadialGradient(0, 0, 40, 0, 0, 150);
+  hg.addColorStop(0, 'rgba(62,166,255,0.28)'); hg.addColorStop(1, 'rgba(62,166,255,0)');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, 150, 0, TAU); ctx.fill();
+
+  // solar wings: cell grids with a sheen that sweeps across each panel
+  for (const side of [-1, 1]) {
+    const x0 = side * 36, x1 = side * 112;
+    const lo = Math.min(x0, x1), w = Math.abs(x1 - x0);
+    const wg = ctx.createLinearGradient(lo, 0, lo + w, 0);
+    wg.addColorStop(0, '#16304f'); wg.addColorStop(0.5, '#2f6696'); wg.addColorStop(1, '#16304f');
+    ctx.fillStyle = wg;
+    ctx.fillRect(lo, -13, w, 26);
+    ctx.strokeStyle = 'rgba(10,25,45,0.85)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = lo + 12; x < lo + w; x += 12) { ctx.moveTo(x, -13); ctx.lineTo(x, 13); }
+    ctx.moveTo(lo, 0); ctx.lineTo(lo + w, 0);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(158,230,255,0.4)';
+    ctx.strokeRect(lo, -13, w, 26);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(lo, -13, w, 26); ctx.clip();
+    const sx = lo + (((t * 30) + (side > 0 ? 0 : 40)) % (w + 30)) - 15;
+    ctx.fillStyle = 'rgba(200,240,255,0.2)';
+    ctx.fillRect(sx, -13, 10, 26);
+    ctx.restore();
+    ctx.fillStyle = '#23405f';
+    ctx.fillRect(Math.min(side * 20, side * 36), -3, 16, 6);
+  }
+
+  // docking arms with cradles and running lights
+  for (let i = 0; i < 4; i++) {
+    ctx.save();
+    ctx.rotate(Math.PI / 4 + i * Math.PI / 2);
+    ctx.fillStyle = '#1d3d5e'; ctx.fillRect(18, -4, 66, 8);
+    ctx.fillStyle = '#2d5a86'; ctx.fillRect(18, -4, 66, 2);
+    ctx.fillStyle = '#132a42'; ctx.fillRect(80, -12, 10, 24);
+    ctx.strokeStyle = acc; ctx.lineWidth = 1.2; ctx.strokeRect(80, -12, 10, 24);
+    const on = Math.floor(t * 3 + i) % 2 === 0;
+    ctx.fillStyle = on ? '#7fffd4' : '#ff6b6b';
+    ctx.beginPath(); ctx.arc(90, -8, 2, 0, TAU); ctx.arc(90, 8, 2, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  // rotating habitat ring with lit windows
   ctx.save();
   ctx.rotate(t / 9);
-  ctx.strokeStyle = '#2b4f72'; ctx.lineWidth = 6;
+  ctx.lineWidth = 11; ctx.strokeStyle = '#21476c';
   ctx.beginPath(); ctx.arc(0, 0, 66, 0, TAU); ctx.stroke();
-  for (let i = 0; i < 6; i++) {
-    ctx.rotate(TAU / 6);
-    ctx.fillStyle = '#284a6c';
-    ctx.fillRect(40, -5, 28, 10);
-    const on = Math.sin(t * 3 + i) > 0;
-    ctx.fillStyle = on ? '#7fffd4' : '#ff6b6b';
-    ctx.beginPath(); ctx.arc(68, 0, 3, 0, TAU); ctx.fill();
+  ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(158,230,255,0.5)';
+  ctx.beginPath(); ctx.arc(0, 0, 71.5, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, 60.5, 0, TAU); ctx.stroke();
+  for (let i = 0; i < 36; i++) {
+    const lit = Math.sin(t * 1.3 + i * 2.7) > -0.2;
+    ctx.save();
+    ctx.rotate(i / 36 * TAU);
+    ctx.fillStyle = lit ? (i % 6 === 0 ? acc : '#ffd98a') : '#0c1a2a';
+    ctx.fillRect(63, -1.5, 6, 3);
+    ctx.restore();
   }
   ctx.restore();
-  ctx.fillStyle = '#132a42';
-  ctx.strokeStyle = '#3ea6ff'; ctx.lineWidth = 3;
-  ctx.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const a = i / 8 * TAU + Math.PI / 8;
-    const x = Math.cos(a) * 46, y = Math.sin(a) * 46;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+
+  // counter-rotating dashed inner ring
+  ctx.save();
+  ctx.rotate(-t * 0.4);
+  ctx.setLineDash([4, 8]); ctx.strokeStyle = acc; ctx.globalAlpha = 0.6; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(0, 0, 44, 0, TAU); ctx.stroke();
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // antenna mast with dish and beacon
+  ctx.strokeStyle = '#5c8db8'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, -40); ctx.lineTo(0, -90); ctx.stroke();
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-8, -70); ctx.lineTo(8, -70); ctx.stroke();
+  ctx.strokeStyle = '#9ee6ff'; ctx.lineWidth = 2.2;
+  ctx.beginPath(); ctx.arc(0, -90, 6, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+  if (Math.sin(t * 4) > 0.2) {
+    const bg = ctx.createRadialGradient(0, -98, 0, 0, -98, 8);
+    bg.addColorStop(0, 'rgba(255,77,77,0.9)'); bg.addColorStop(1, 'rgba(255,77,77,0)');
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, -98, 8, 0, TAU); ctx.fill();
   }
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.arc(0, 0, 18, 0, TAU);
-  ctx.fillStyle = '#0a1d31'; ctx.fill();
-  ctx.strokeStyle = '#9ee6ff'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = '#9ee6ff'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
-  ctx.fillText('STATION', 0, -78);
+  ctx.fillStyle = '#ff4d4d'; ctx.beginPath(); ctx.arc(0, -98, 2, 0, TAU); ctx.fill();
+
+  // hub: octagonal core with metal gradient
+  const octo = (r) => {
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * TAU + Math.PI / 8;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  };
+  octo(40);
+  const hub = ctx.createRadialGradient(-10, -10, 4, 0, 0, 44);
+  hub.addColorStop(0, '#3d6e98'); hub.addColorStop(1, '#132a42');
+  ctx.fillStyle = hub; ctx.fill();
+  ctx.strokeStyle = '#3ea6ff'; ctx.lineWidth = 2.5; ctx.stroke();
+  octo(28);
+  ctx.strokeStyle = 'rgba(158,230,255,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+
+  // pulsing reactor core
+  const pulse = 0.6 + 0.4 * Math.sin(t * 2.2);
+  const cg = ctx.createRadialGradient(0, 0, 0, 0, 0, 20);
+  cg.addColorStop(0, 'rgba(255,255,255,0.95)');
+  cg.addColorStop(0.35, acc);
+  cg.addColorStop(1, 'rgba(62,166,255,0)');
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, 20, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = acc; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('STATION', 0, -108);
 }
 
 // per-asteroid surface detail, generated once from its position so it stays stable
