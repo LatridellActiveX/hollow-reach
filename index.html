@@ -4,48 +4,67 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
 <meta name="theme-color" content="#05070d" />
+<meta name="description" content="Hollow Reach: a mobile space trading, mining and combat game." />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Hollow Reach" />
 <title>Hollow Reach</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:#05070d;color:#cfe8ff;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;background:#05070d;color:#cfe8ff;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
 #c{position:fixed;inset:0;display:block;touch-action:none}
-#hud{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 8px) 12px 14px;background:linear-gradient(#05070df0,#05070d00);pointer-events:none}
+#mini{position:fixed;right:10px;top:calc(env(safe-area-inset-top) + 8px);width:112px;height:112px;border-radius:50%;border:1px solid #1d3350;background:#05070dcc;pointer-events:none}
+#hud{position:fixed;top:0;left:0;width:62%;max-width:420px;padding:calc(env(safe-area-inset-top) + 8px) 12px 16px;background:linear-gradient(#05070ded,#05070d00);pointer-events:none}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-#sysname{font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ee6ff}
+#sysname{font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9ee6ff;text-shadow:0 0 8px #3ea6ff66}
 #sec{margin-left:8px;font-weight:700}
-#credits{color:#ffd166;font-variant-numeric:tabular-nums;font-weight:600}
+#credits{color:#ffd166;font-variant-numeric:tabular-nums;font-weight:700;text-shadow:0 0 8px #ffd16655}
 .bars{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
-.bar{height:8px;background:#0e1a2b;border:1px solid #1d3350;border-radius:4px;overflow:hidden}
-.bar i{display:block;height:100%;width:100%;transition:width .2s}
-#bsh{background:#3ea6ff}#bhu{background:#e0524c}#bfu{background:#7fd17f}
-.labels{display:grid;grid-template-columns:1fr 1fr 1fr;font-size:11px;color:#7d97b5;margin-top:2px}
-#status{font-size:12px;color:#7d97b5;margin-top:4px}
-#cargo{font-size:12px;color:#7d97b5;margin-top:4px}
-#bar{position:fixed;left:0;right:0;bottom:0;padding:8px 8px calc(env(safe-area-inset-bottom) + 10px);display:flex;gap:8px;justify-content:center;background:linear-gradient(#05070d00,#05070df0)}
-button{background:#0f2034;color:#cfe8ff;border:1px solid #2a4a6e;border-radius:10px;padding:12px 14px;font:600 14px system-ui;min-width:72px;cursor:pointer}
-button:active{transform:scale(.97)}
+.bar{height:9px;background:#0e1a2b;border:1px solid #1d3350;border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;transition:width .25s;box-shadow:0 0 8px currentColor}
+#bsh{background:#3ea6ff;color:#3ea6ff}#bhu{background:#e0524c;color:#e0524c}#bfu{background:#7fd17f;color:#7fd17f}
+.labels{display:grid;grid-template-columns:1fr 1fr 1fr;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7d97b5;margin-top:2px}
+#status{font-size:12px;color:#9fb6d0;margin-top:5px}
+#cargo{font-size:12px;color:#9fb6d0;margin-top:5px;white-space:nowrap}
+#menu{position:fixed;right:10px;top:calc(env(safe-area-inset-top) + 128px);display:flex;gap:6px}
+.sm{min-width:56px;padding:8px 10px;font-size:12px;border-radius:8px}
+#acts{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);display:grid;grid-template-columns:repeat(2,70px);gap:10px}
+button{background:#0f2034e6;color:#cfe8ff;border:1px solid #2a4a6e;border-radius:12px;padding:10px 12px;font:700 13px system-ui;cursor:pointer;touch-action:manipulation}
+button:active{transform:scale(.96)}
 button:disabled{opacity:.35}
+.act{width:70px;height:70px;border-radius:50%;font-size:12px;letter-spacing:.06em;padding:0}
+.act.on{background:#1d5a8f;border-color:#3ea6ff;box-shadow:0 0 14px #3ea6ff88}
+.act.fire.on{background:#7a2a2a;border-color:#ff6b6b;box-shadow:0 0 14px #ff6b6b88}
+.act.mine.on{background:#1b6b5f;border-color:#7fffd4;box-shadow:0 0 14px #7fffd488}
+.act.stop{border-color:#5a4a2a;color:#ffd9a0}
 .hide{display:none!important}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 84px);background:#0f2034e6;border:1px solid #2a4a6e;padding:6px 12px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:92vw;text-align:center}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 96px);background:#0f2034ee;border:1px solid #2a4a6e;padding:7px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 4px 18px #000a}
 #toast.show{opacity:1}
-#flash{position:fixed;inset:0;background:#cfe8ff;opacity:0;pointer-events:none;transition:opacity .45s}
-#panel{position:fixed;inset:0;background:#05070ef5;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 12px)}
-.ph{display:flex;justify-content:space-between;align-items:center;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ee6ff;margin-bottom:8px}
-#pbody{flex:1;overflow-y:auto}
+#flash{position:fixed;inset:0;background:#dff3ff;opacity:0;pointer-events:none;transition:opacity .4s}
+#panel{position:fixed;inset:0;background:#05070ef7;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 12px)}
+.ph{display:flex;justify-content:space-between;align-items:center;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9ee6ff;margin-bottom:8px}
+#pbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .sec{border-top:1px solid #1d3350;padding:8px 0}
-h3{margin:6px 0;color:#9ee6ff;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
-.item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;gap:8px}
+h3{margin:6px 0;color:#9ee6ff;font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;gap:8px}
 .dim{color:#7d97b5;font-size:12px}
 .wide{width:100%;margin-top:12px}
 .danger{border-color:#6b2a2a;color:#ffb0a8}
-.msg{padding:5px 0;border-bottom:1px solid #101c2e;font-size:13px}
-#mapc{width:100%;height:50vh;display:block;touch-action:none;border:1px solid #1d3350;border-radius:10px;background:#070c16}
+.good{border-color:#2f6b3a;color:#b8f5c4}
+.msg{padding:6px 0;border-bottom:1px solid #101c2e;font-size:13px}
+#mapc{width:100%;height:50vh;display:block;touch-action:none;border:1px solid #1d3350;border-radius:12px;background:#070c16}
 #mapinfo{margin:8px 0;font-size:13px}
+.tip{font-size:13px;color:#b9cbe0;line-height:1.5;margin:6px 0}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<canvas id="mini" width="256" height="256"></canvas>
 
 <div id="hud">
   <div class="row"><div><span id="sysname"></span><span id="sec"></span></div><div id="credits"></div></div>
@@ -55,17 +74,25 @@ h3{margin:6px 0;color:#9ee6ff;font-size:13px;text-transform:uppercase;letter-spa
     <div class="bar"><i id="bfu"></i></div>
   </div>
   <div class="labels"><span>Shield</span><span>Hull</span><span>Fuel</span></div>
-  <div class="row"><span id="status"></span><span id="cargo"></span></div>
+  <div id="status"></div>
+  <div id="cargo"></div>
+</div>
+
+<div id="menu">
+  <button id="bMap" class="sm">Map</button>
+  <button id="bSnd" class="sm">Sound on</button>
+  <button id="bLog" class="sm">Log</button>
+</div>
+
+<div id="acts">
+  <button id="bFire" class="act fire">FIRE</button>
+  <button id="bMine" class="act mine">MINE</button>
+  <button id="bWarp" class="act">WARP</button>
+  <button id="bDock" class="act">DOCK</button>
+  <button id="bStop" class="act stop">STOP</button>
 </div>
 
 <div id="toast"></div>
-
-<div id="bar">
-  <button id="bMap">Map</button>
-  <button id="bDock">Dock</button>
-  <button id="bStop">Stop</button>
-  <button id="bLog">Log</button>
-</div>
 
 <div id="panel" class="hide">
   <div class="ph"><span id="ptitle"></span><button id="pclose">Close</button></div>
@@ -78,28 +105,29 @@ h3{margin:6px 0;color:#9ee6ff;font-size:13px;text-transform:uppercase;letter-spa
 (() => {
 'use strict';
 
-// ---------- constants ----------
+// ============ constants ============
 const TAU = Math.PI * 2;
 const GATE_R = 1500;
 const JUMP_FUEL = 10;
 const MINE_RANGE = 170;
 const WEAPON_RANGE = 340;
 const DOCK_RANGE = 110;
-const SAVE_KEY = 'hollowReach.v1';
+const TILE = 1024;
+const SAVE_KEY = 'hollowReach.v2';
 
 const UPG = [
-  { k: 'cannon', name: 'Pulse Cannon',      base: 600, desc: '+8 damage per level' },
-  { k: 'mining', name: 'Mining Laser',      base: 500, desc: '+0.8 ore/s per level' },
-  { k: 'shield', name: 'Shield Booster',    base: 500, desc: '+30 max shield per level' },
-  { k: 'armor',  name: 'Armor Plating',     base: 500, desc: '+40 max hull per level' },
-  { k: 'cargo',  name: 'Cargo Hold',        base: 400, desc: '+25 cargo per level' },
-  { k: 'engine', name: 'Afterburner Engine',base: 400, desc: '+30 top speed per level' },
-  { k: 'fuel',   name: 'Fuel Tank',         base: 300, desc: '+40 max fuel per level' },
+  { k: 'cannon', name: 'Pulse Cannon',       base: 600, desc: '+8 damage per level' },
+  { k: 'mining', name: 'Mining Laser',       base: 500, desc: '+0.8 ore/s per level' },
+  { k: 'shield', name: 'Shield Booster',     base: 500, desc: '+30 max shield per level' },
+  { k: 'armor',  name: 'Armor Plating',      base: 500, desc: '+40 max hull per level' },
+  { k: 'cargo',  name: 'Cargo Hold',         base: 400, desc: '+25 cargo per level' },
+  { k: 'engine', name: 'Afterburner Engine', base: 400, desc: '+30 top speed per level' },
+  { k: 'fuel',   name: 'Fuel Tank',          base: 300, desc: '+40 max fuel per level' },
 ];
 
 const NAMES = ['Ketra','Oryn','Vesk','Halden','Murro','Tessaly','Brimm','Caldis','Ixar','Pell','Sorrow','Vantris'];
 
-// ---------- helpers ----------
+// ============ helpers ============
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -111,25 +139,116 @@ function rng(seed) {
   return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
 }
 const secColor = s => s >= 0.7 ? '#3ea6ff' : s >= 0.4 ? '#ffb347' : '#e0524c';
+function vibe(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
 
-// ---------- galaxy (fixed layout: 3 rows x 4 cols) ----------
+// ============ sound (synthesized with Web Audio; no audio files) ============
+const SND = {
+  on: (() => { try { return localStorage.getItem('hollowReach.sound') !== 'off'; } catch (e) { return true; } })(),
+  ac: null, master: null, noise: null, eng: null, engG: null, engF: null,
+  init() {
+    if (this.ac) { if (this.ac.state === 'suspended') this.ac.resume(); return; }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ac = new AC();
+      this.ac = ac;
+      this.master = ac.createGain();
+      this.master.gain.value = 0.35;
+      this.master.connect(ac.destination);
+      const len = (ac.sampleRate * 1.5) | 0;
+      this.noise = ac.createBuffer(1, len, ac.sampleRate);
+      const d = this.noise.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      // engine drone, pitch and volume follow ship speed
+      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 55;
+      const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220;
+      const g = ac.createGain(); g.gain.value = 0;
+      o.connect(f); f.connect(g); g.connect(this.master); o.start();
+      this.eng = o; this.engG = g; this.engF = f;
+    } catch (e) { this.ac = null; }
+  },
+  ok() { return this.on && this.ac && this.ac.state === 'running'; },
+  tone(freq, dur, o = {}) {
+    if (!this.ok()) return;
+    const type = o.type || 'square', vol = o.vol ?? 0.2, slide = o.slide ?? null, delay = o.delay || 0;
+    const t = this.ac.currentTime + delay;
+    const osc = this.ac.createOscillator(), g = this.ac.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(slide, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g); g.connect(this.master);
+    osc.start(t); osc.stop(t + dur + 0.02);
+  },
+  noiseBurst(dur, o = {}) {
+    if (!this.ok()) return;
+    const t = this.ac.currentTime + (o.delay || 0);
+    const src = this.ac.createBufferSource(); src.buffer = this.noise;
+    const f = this.ac.createBiquadFilter();
+    f.type = o.type || 'lowpass'; f.frequency.value = o.freq || 800; f.Q.value = o.q || 1;
+    const g = this.ac.createGain();
+    g.gain.setValueAtTime(o.vol ?? 0.3, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(t, rnd(0, 0.5)); src.stop(t + dur + 0.02);
+  },
+  laser()     { this.tone(880, 0.12, { type: 'square', vol: 0.1, slide: 220 }); },
+  hit()       { this.noiseBurst(0.18, { freq: 500, vol: 0.35 }); this.tone(110, 0.2, { type: 'sine', vol: 0.25, slide: 50 }); },
+  playerHit() { this.noiseBurst(0.2, { freq: 300, vol: 0.45 }); this.tone(90, 0.25, { type: 'sine', vol: 0.3, slide: 40 }); },
+  explode()   { this.noiseBurst(0.7, { freq: 900, vol: 0.45 }); this.tone(140, 0.5, { type: 'sine', vol: 0.3, slide: 30 }); },
+  death()     { this.noiseBurst(1.4, { freq: 400, vol: 0.55 }); this.tone(400, 1.2, { type: 'sawtooth', vol: 0.18, slide: 40 }); },
+  mine()      { this.tone(1400 + rnd(-80, 80), 0.05, { type: 'triangle', vol: 0.06 }); },
+  chime()     { [660, 880, 1320].forEach((f, i) => this.tone(f, 0.25, { type: 'triangle', vol: 0.16, delay: i * 0.07 })); },
+  coin()      { this.tone(988, 0.1, { type: 'square', vol: 0.08 }); this.tone(1319, 0.18, { type: 'square', vol: 0.08, delay: 0.08 }); },
+  buy()       { [523, 659, 784].forEach((f, i) => this.tone(f, 0.18, { type: 'triangle', vol: 0.16, delay: i * 0.08 })); },
+  dock()      { this.tone(440, 0.2, { type: 'sine', vol: 0.18 }); this.tone(660, 0.3, { type: 'sine', vol: 0.18, delay: 0.15 }); },
+  warp()      { this.tone(120, 1.0, { type: 'sawtooth', vol: 0.1, slide: 1400 }); this.noiseBurst(0.9, { freq: 2000, type: 'bandpass', vol: 0.15, q: 2 }); },
+  error()     { this.tone(150, 0.25, { type: 'sawtooth', vol: 0.12, slide: 110 }); },
+  click()     { this.tone(1800, 0.03, { type: 'square', vol: 0.05 }); },
+  engine(frac) {
+    if (!this.ok() || !this.eng) return;
+    const t = this.ac.currentTime;
+    this.engG.gain.setTargetAtTime(0.02 + 0.06 * frac, t, 0.1);
+    this.engF.frequency.setTargetAtTime(200 + 500 * frac, t, 0.1);
+    this.eng.frequency.setTargetAtTime(45 + 40 * frac, t, 0.1);
+  },
+  setOn(v) {
+    this.on = v;
+    try { localStorage.setItem('hollowReach.sound', v ? 'on' : 'off'); } catch (e) {}
+    if (!v && this.engG) this.engG.gain.value = 0;
+  }
+};
+// audio contexts can only start after a user gesture
+document.addEventListener('pointerdown', () => SND.init(), true);
+
+// ============ galaxy (fixed layout: 3 rows x 4 cols) ============
 const SYS = (() => {
   const r = rng(7);
   const out = [];
+  const PLANET_KINDS = [
+    { c1: '#f2b880', c2: '#8a4b2a', bands: 6, ring: true,  ringCol: '#e8d6a8' }, // gas giant
+    { c1: '#9aa6b8', c2: '#3a4456', bands: 0, ring: false, ringCol: '' },         // rocky
+    { c1: '#d6f1ff', c2: '#4f7fa6', bands: 3, ring: true,  ringCol: '#bfe6ff' }, // ice
+  ];
   for (let i = 0; i < 12; i++) {
     const col = i % 4, row = Math.floor(i / 4);
     const sec = row === 0 ? +(0.8 + r() * 0.2).toFixed(1)
               : row === 1 ? +(0.4 + r() * 0.2).toFixed(1)
               : +(0.1 + r() * 0.25).toFixed(1);
+    const kind = PLANET_KINDS[Math.floor(r() * 3)];
+    const pa = r() * TAU;
     out.push({
       id: i, name: NAMES[i], sec, col, row,
       mx: col * 200 + 100 + (r() * 30 - 15),
       my: row * 190 + 100 + (r() * 30 - 15),
+      hue: sec >= 0.7 ? 210 : sec >= 0.4 ? 30 : 350,
+      planet: { x: Math.cos(pa) * 1050, y: Math.sin(pa) * 1050, r: 180 + r() * 140, ...kind },
       links: [], gates: {}
     });
   }
   out.forEach(s => {
-    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dc, dr]) => {
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dc, dr]) => {
       const c = s.col + dc, rr = s.row + dr;
       if (c >= 0 && c < 4 && rr >= 0 && rr < 3) s.links.push(rr * 4 + c);
     });
@@ -156,7 +275,7 @@ function path(from, to) {
   return p;
 }
 
-// ---------- persistent state ----------
+// ============ persistent state ============
 function freshState() {
   return {
     v: 1, credits: 1000,
@@ -181,21 +300,36 @@ function load() {
   return freshState();
 }
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, s: P })); } catch (e) {} }
-
 const P = load();
 
-// ---------- runtime state ----------
+// ============ runtime state ============
 const R = {
   target: null, dest: null, stop: 0, route: null,
-  mineAcc: 0, fireCool: 0, shieldDelay: 0, mining: false,
-  panel: null, saveT: 0, hudT: 0, msgs: []
+  mining: false, mineRef: null, mineAcc: 0, chipT: 0, fullWarn: false,
+  fireCool: 0, shieldDelay: 0, hitFlash: 0, shake: 0,
+  autoFire: false, autoMine: false,
+  panel: null, saveT: 0, hudT: 0, msgs: [], time: 0
 };
+const U = { zoom: 1 };
+const joy = { active: false, bx: 0, by: 0, kx: 0, ky: 0, dx: 0, dy: 0, mag: 0 };
 const ship = { x: 130, y: 0, vx: 0, vy: 0, heading: 0 };
 const cam = { x: 130, y: 0 };
-const world = { asts: [], npcs: [], beams: [], fx: [], tAst: 0, tPir: 0, timerA: 0, timerP: 0 };
-const stars = Array.from({ length: 150 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() * 1.5 + 0.5, a: Math.random() }));
+const world = { asts: [], npcs: [], beams: [], rings: [], parts: [], texts: [], tAst: 0, tPir: 0, timerA: 0, timerP: 0 };
+let deferredPrompt = null;
 
-// ---------- stats ----------
+const starLayers = [
+  { f: 0.05, s: [0.6, 1.1], n: 140 },
+  { f: 0.14, s: [1.0, 1.7], n: 90 },
+  { f: 0.30, s: [1.4, 2.3], n: 40 },
+].map(L => ({
+  ...L,
+  pts: Array.from({ length: L.n }, () => ({
+    x: Math.random() * TILE, y: Math.random() * TILE,
+    s: rnd(L.s[0], L.s[1]), a: rnd(0.35, 1), tw: rnd(0.6, 2.2), p: rnd(0, TAU)
+  }))
+}));
+
+// ============ stats ============
 function st() {
   const L = P.levels;
   return {
@@ -213,26 +347,52 @@ const cargoUsed = () => P.cargo.veldite + P.cargo.krysite;
 const secOf = () => SYS[P.sysId].sec;
 const unitPrice = k => Math.round((k === 'krysite' ? 42 : 12) * (1 + (1 - secOf()) * 0.6));
 
-// ---------- canvas ----------
+// ============ canvas ============
 const canvas = $('c');
 const ctx = canvas.getContext('2d');
-let W = 0, H = 0, DPR = 1, ZOOM = 1;
+const mini = $('mini');
+const mctx = mini.getContext('2d');
+let W = 0, H = 0, DPR = 1, BASEZ = 1, ZOOM = 1;
 function resize() {
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  DPR = Math.min(window.devicePixelRatio || 1, 2.5);
   W = innerWidth; H = innerHeight;
-  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ZOOM = clamp(Math.min(W, H) / 420, 0.7, 1.4);
+  BASEZ = clamp(Math.min(W, H) / 420, 0.7, 1.4);
 }
 addEventListener('resize', resize);
 resize();
 
-// ---------- feedback ----------
+// ============ nebula (cached per system) ============
+const nebCache = {};
+function nebula(sysId) {
+  if (nebCache[sysId]) return nebCache[sysId];
+  const N = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d');
+  const r = rng(sysId * 977 + 13);
+  const hue = SYS[sysId].hue;
+  for (let i = 0; i < 10; i++) {
+    const x = r() * N, y = r() * N, rad = 110 + r() * 170;
+    const col = `hsla(${hue + r() * 50 - 25},75%,${45 + r() * 20}%,`;
+    for (const dx of [-N, 0, N]) for (const dy of [-N, 0, N]) {
+      const gr = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, rad);
+      gr.addColorStop(0, col + '0.22)');
+      gr.addColorStop(1, col + '0)');
+      g.fillStyle = gr;
+      g.fillRect(x + dx - rad, y + dy - rad, rad * 2, rad * 2);
+    }
+  }
+  nebCache[sysId] = c;
+  return c;
+}
+
+// ============ feedback ============
 let toastT = 0;
 function log(m) {
   R.msgs.unshift({ t: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), m });
-  R.msgs.length = Math.min(R.msgs.length, 80);
+  R.msgs.length = Math.min(R.msgs.length, 100);
   const t = $('toast');
   t.textContent = m;
   t.classList.add('show');
@@ -241,17 +401,48 @@ function log(m) {
 }
 function flash() {
   const f = $('flash');
-  f.style.opacity = 0.5;
+  f.style.opacity = 0.45;
   setTimeout(() => { f.style.opacity = 0; }, 90);
 }
+function text(x, y, txt, col) { world.texts.push({ x, y, txt, col, life: 0.9, max: 0.9 }); }
 
-// ---------- spawning ----------
+// ============ particles ============
+function part(x, y, vx, vy, life, col, size) {
+  if (world.parts.length > 700) return;
+  world.parts.push({ x, y, vx, vy, life, max: life, col, size });
+}
+function burst(x, y, col, n, speed, life) {
+  for (let i = 0; i < n; i++) {
+    const a = rnd(0, TAU), s = rnd(speed * 0.3, speed);
+    part(x, y, Math.cos(a) * s, Math.sin(a) * s, life * rnd(0.6, 1), col, rnd(1.5, 3.5));
+  }
+}
+function updateParts(dt) {
+  const k = Math.pow(0.35, dt);
+  for (const p of world.parts) {
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= k; p.vy *= k;
+    p.life -= dt;
+  }
+  let w = 0;
+  for (let i = 0; i < world.parts.length; i++) if (world.parts[i].life > 0) world.parts[w++] = world.parts[i];
+  world.parts.length = w;
+}
+
+// ============ spawning ============
 function spawnAst() {
   const sec = secOf();
   const a = rnd(0, TAU), d = rnd(300, 1250);
   const kry = Math.random() < (sec < 0.4 ? 0.2 : sec < 0.7 ? 0.07 : 0);
+  const r = kry ? 16 : rnd(20, 30);
+  const n = 9, pts = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / n * TAU;
+    const rr = r * rnd(0.78, 1.12);
+    pts.push([Math.cos(t) * rr, Math.sin(t) * rr]);
+  }
   const max = kry ? 60 : 140;
-  world.asts.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, r: kry ? 16 : rnd(20, 30), kry, ore: max, max, seed: Math.random() });
+  world.asts.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, r, kry, ore: max, max, pts, rot: rnd(0, TAU) });
 }
 function spawnPir() {
   const sec = secOf();
@@ -260,11 +451,11 @@ function spawnPir() {
   const a = g + rnd(-0.3, 0.3), d = rnd(1150, 1350);
   const tier = sec < 0.2 ? 3 : sec < 0.4 ? 2 : 1;
   const hp = 70 + 35 * tier;
-  world.npcs.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, vx: 0, vy: 0, hp, max: hp, tier, fire: rnd(0.5, 1.5), angle: 0 });
+  world.npcs.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, vx: 0, vy: 0, hp, max: hp, tier, fire: rnd(0.5, 1.5), angle: 0, aggro: false });
 }
 function populate() {
   const sec = secOf();
-  world.asts = []; world.npcs = []; world.beams = []; world.fx = [];
+  world.asts = []; world.npcs = []; world.beams = []; world.rings = []; world.parts = []; world.texts = [];
   world.tAst = sec >= 0.7 ? 8 : sec >= 0.4 ? 11 : 14;
   world.tPir = sec >= 0.7 ? 0 : sec >= 0.4 ? 2 : 5;
   for (let i = 0; i < world.tAst; i++) spawnAst();
@@ -278,16 +469,32 @@ function updateSpawns(dt) {
   if (world.timerP > 25 && world.npcs.length < world.tPir) { world.timerP = 0; spawnPir(); }
 }
 
-// ---------- combat & mining ----------
+// ============ combat & mining ============
 function beam(x1, y1, x2, y2, col, life) { world.beams.push({ x1, y1, x2, y2, col, life, max: life }); }
-function explode(x, y) { world.fx.push({ x, y, life: 0.6, max: 0.6, r: 40 }); }
+
+function fireAt(n) {
+  const s = st();
+  R.fireCool = s.cool;
+  SND.laser();
+  const dmg = s.dmg * rnd(0.9, 1.1);
+  n.hp -= dmg;
+  beam(ship.x, ship.y, n.x, n.y, '#9ee6ff', 0.12);
+  burst(n.x, n.y, '#ffd0a0', 4, 70, 0.3);
+  text(n.x, n.y - 30, '-' + Math.round(dmg), '#9ee6ff');
+  if (n.hp <= 0) killNpc(n);
+}
 
 function killNpc(n) {
   world.npcs = world.npcs.filter(x => x !== n);
   const bounty = Math.round(150 * n.tier * (1 + (1 - secOf()) * 0.5));
   P.credits += bounty; P.kills++;
-  explode(n.x, n.y);
-  R.target = null;
+  burst(n.x, n.y, '#ff9e6b', 26, 240, 0.9);
+  burst(n.x, n.y, '#fff2d0', 10, 140, 0.6);
+  world.rings.push({ x: n.x, y: n.y, life: 0.6, max: 0.6, r: 60 });
+  text(n.x, n.y - 40, '+' + fmt(bounty) + ' cr', '#ffd166');
+  if (R.target && R.target.ref === n) R.target = null;
+  vibe([30, 40, 30]);
+  SND.explode(); SND.coin();
   log(`Pirate destroyed. Bounty ${fmt(bounty)} cr.`);
 }
 
@@ -296,25 +503,43 @@ function removeAst(a) { world.asts = world.asts.filter(x => x !== a); }
 function mine(a, dt) {
   const s = st();
   if (cargoUsed() >= s.cargoMax) {
-    log('Cargo hold full. Sell ore at a station.');
-    R.target = null; R.mining = false; return;
+    R.mining = false;
+    if (R.target && R.target.kind === 'ast') R.target = null;
+    if (!R.fullWarn) { R.fullWarn = true; SND.error(); log('Cargo hold full. Sell ore at a station.'); }
+    return;
   }
   R.mining = true;
+  R.mineRef = a;
   R.mineAcc += s.rate * dt;
   while (R.mineAcc >= 1 && a.ore > 0 && cargoUsed() < s.cargoMax) {
     R.mineAcc -= 1; a.ore -= 1;
     P.cargo[a.kry ? 'krysite' : 'veldite']++;
     P.mined++;
   }
+  R.chipT += dt;
+  if (R.chipT > 0.12) {
+    R.chipT = 0;
+    const dx = ship.x - a.x, dy = ship.y - a.y, d = Math.hypot(dx, dy) || 1;
+    SND.mine();
+    part(a.x + rnd(-a.r, a.r) * 0.5, a.y + rnd(-a.r, a.r) * 0.5, dx / d * 140, dy / d * 140, 0.5, a.kry ? '#7fffd4' : '#c9b78a', 2.2);
+  }
   if (a.ore <= 0) {
     removeAst(a);
-    R.target = null; R.mining = false;
+    burst(a.x, a.y, '#c9b78a', 14, 160, 0.6);
+    R.mining = false;
+    if (R.target && R.target.kind === 'ast') R.target = null;
+    SND.chime();
     log('Asteroid depleted.');
   }
 }
 
 function hitPlayer(dmg) {
   R.shieldDelay = 5;
+  R.hitFlash = 0.25;
+  R.shake = Math.min(14, R.shake + dmg * 0.5);
+  text(ship.x, ship.y - 28, '-' + Math.round(dmg), '#ff6b6b');
+  vibe(18);
+  SND.playerHit();
   const a = Math.min(P.shield, dmg);
   P.shield -= a; dmg -= a;
   if (dmg > 0) P.hull -= dmg;
@@ -329,11 +554,15 @@ function die() {
   P.cargo = { veldite: 0, krysite: 0 };
   const s = st();
   P.hull = s.hullMax; P.shield = s.shMax; P.fuel = Math.max(P.fuel, 30);
+  burst(ship.x, ship.y, '#9ee6ff', 40, 260, 1.1);
+  burst(ship.x, ship.y, '#ff9e6b', 30, 200, 0.9);
   ship.x = 130; ship.y = 0; ship.vx = 0; ship.vy = 0;
   cam.x = ship.x; cam.y = ship.y;
-  R.target = null; R.dest = null; R.route = null; R.mining = false;
+  R.target = null; R.dest = null; R.route = null; R.mining = false; R.autoFire = false; R.autoMine = false;
   populate();
   flash();
+  vibe([80, 60, 120]);
+  SND.death();
   log(`Ship destroyed. Clone cost ${fmt(lost)} cr. Cargo lost.`);
   save();
 }
@@ -344,8 +573,9 @@ function stepNpcs(dt) {
     const d = Math.hypot(dx, dy) || 1;
     const ux = dx / d, uy = dy / d;
     n.angle = Math.atan2(dy, dx);
+    n.aggro = d < 900;
     let want = { x: 0, y: 0 };
-    if (d < 900) {
+    if (n.aggro) {
       if (d > 240) want = { x: ux * 160, y: uy * 160 };
       else want = { x: -uy * 150 - ux * (230 - d) * 0.8, y: ux * 150 - uy * (230 - d) * 0.8 };
     }
@@ -353,16 +583,28 @@ function stepNpcs(dt) {
     n.vy += (want.y - n.vy) * Math.min(1, dt * 2.5);
     n.x += n.vx * dt; n.y += n.vy * dt;
     n.fire -= dt;
-    if (d < 260 && n.fire <= 0) {
+    if (n.aggro && d < 260 && n.fire <= 0) {
       n.fire = 1.4;
       const dmg = (6 + n.tier * 4) * rnd(0.8, 1.2);
       beam(n.x, n.y, ship.x, ship.y, '#ff6b6b', 0.12);
+      burst(n.x, n.y, '#ff8a8a', 4, 60, 0.25);
       if (hitPlayer(dmg)) return;
     }
   }
 }
 
-// ---------- navigation ----------
+function nearestNpc(range) {
+  let best = null, bd = range;
+  for (const n of world.npcs) { const d = dist(ship, n); if (d <= bd) { bd = d; best = n; } }
+  return best;
+}
+function nearestAst(range) {
+  let best = null, bd = range;
+  for (const a of world.asts) { const d = dist(ship, a); if (d <= bd) { bd = d; best = a; } }
+  return best;
+}
+
+// ============ navigation ============
 function gatePos(to) {
   const a = SYS[P.sysId].gates[to];
   return { x: Math.cos(a) * GATE_R, y: Math.sin(a) * GATE_R };
@@ -370,6 +612,7 @@ function gatePos(to) {
 
 function doJump(to) {
   if (P.fuel < JUMP_FUEL) {
+    SND.error();
     log('Insufficient fuel for warp. Refuel at a station.');
     R.target = null; R.route = null;
     return false;
@@ -383,6 +626,8 @@ function doJump(to) {
   cam.x = ship.x; cam.y = ship.y;
   R.target = null; R.dest = null; R.mining = false;
   flash();
+  vibe(35);
+  SND.warp();
   populate();
   log(`Warped to ${SYS[to].name} (sec ${SYS[to].sec.toFixed(1)}).`);
   save();
@@ -400,6 +645,7 @@ function updateRoute() {
 }
 
 function dock() {
+  SND.dock();
   R.target = null; R.dest = null; R.route = null;
   ship.vx = 0; ship.vy = 0;
   save();
@@ -413,20 +659,14 @@ function updateTarget(dt) {
   const s = st();
   switch (t.kind) {
     case 'ast':
-      if (!world.asts.includes(t.ref)) { R.target = null; R.mining = false; return; }
+      if (!world.asts.includes(t.ref)) { R.target = null; return; }
       R.dest = t.ref; R.stop = MINE_RANGE * 0.7;
-      if (d <= MINE_RANGE) mine(t.ref, dt); else R.mining = false;
+      if (d <= MINE_RANGE) mine(t.ref, dt);
       break;
     case 'npc':
       if (!world.npcs.includes(t.ref)) { R.target = null; return; }
       R.dest = t.ref; R.stop = WEAPON_RANGE * 0.8;
-      if (d <= WEAPON_RANGE && R.fireCool <= 0) {
-        R.fireCool = s.cool;
-        const dmg = s.dmg * rnd(0.9, 1.1);
-        t.ref.hp -= dmg;
-        beam(ship.x, ship.y, t.ref.x, t.ref.y, '#9ee6ff', 0.1);
-        if (t.ref.hp <= 0) killNpc(t.ref);
-      }
+      if (d <= WEAPON_RANGE && R.fireCool <= 0) fireAt(t.ref);
       break;
     case 'station':
       R.dest = { x: 0, y: 0 }; R.stop = 60;
@@ -434,35 +674,48 @@ function updateTarget(dt) {
       break;
     case 'gate':
       R.dest = t.ref; R.stop = 20;
-      if (d <= 70) { doJump(t.to); R.target = null; }
+      if (d <= 70) { R.target = null; doJump(t.to); }
       break;
   }
+}
+
+// ============ ship movement ============
+function joystickSteer(dt) {
+  const s = st();
+  const accel = s.speed * 1.6;
+  const tvx = joy.dx * s.speed * joy.mag, tvy = joy.dy * s.speed * joy.mag;
+  ship.vx += clamp(tvx - ship.vx, -accel * dt, accel * dt);
+  ship.vy += clamp(tvy - ship.vy, -accel * dt, accel * dt);
 }
 
 function updateShip(dt) {
   const s = st();
   const accel = s.speed * 1.3;
-  let steering = false;
-  const d = R.dest;
-  if (d) {
-    const dx = d.x - ship.x, dy = d.y - ship.y;
-    const dd = Math.hypot(dx, dy);
-    if (dd > R.stop + 3) {
-      steering = true;
-      const ux = dx / dd, uy = dy / dd;
-      const want = Math.min(s.speed, (dd - R.stop) * 1.6 + 20);
-      const tvx = ux * want, tvy = uy * want;
-      const ax = tvx - ship.vx, ay = tvy - ship.vy;
-      const am = Math.hypot(ax, ay), m = accel * dt;
-      if (am > m) { ship.vx += ax / am * m; ship.vy += ay / am * m; }
-      else { ship.vx = tvx; ship.vy = tvy; }
-    } else if (!R.target) {
-      R.dest = null;
+  if (joy.active) {
+    // joystick overrides autopilot; velocity already set by joystickSteer
+  } else {
+    let steering = false;
+    const d = R.dest;
+    if (d) {
+      const dx = d.x - ship.x, dy = d.y - ship.y;
+      const dd = Math.hypot(dx, dy);
+      if (dd > R.stop + 3) {
+        steering = true;
+        const ux = dx / dd, uy = dy / dd;
+        const want = Math.min(s.speed, (dd - R.stop) * 1.6 + 20);
+        const tvx = ux * want, tvy = uy * want;
+        const ax = tvx - ship.vx, ay = tvy - ship.vy;
+        const am = Math.hypot(ax, ay), m = accel * dt;
+        if (am > m) { ship.vx += ax / am * m; ship.vy += ay / am * m; }
+        else { ship.vx = tvx; ship.vy = tvy; }
+      } else if (!R.target) {
+        R.dest = null;
+      }
     }
-  }
-  if (!steering) {
-    const f = Math.max(0, 1 - dt * 2.5);
-    ship.vx *= f; ship.vy *= f;
+    if (!steering) {
+      const f = Math.max(0, 1 - dt * 2.5);
+      ship.vx *= f; ship.vy *= f;
+    }
   }
   ship.x += ship.vx * dt; ship.y += ship.vy * dt;
   const rr = Math.hypot(ship.x, ship.y);
@@ -473,19 +726,59 @@ function updateShip(dt) {
   if (Math.hypot(ship.vx, ship.vy) > 5) ship.heading = Math.atan2(ship.vy, ship.vx);
 }
 
+function thrusterFx(dt) {
+  const sp = Math.hypot(ship.vx, ship.vy);
+  if (sp < 25) return;
+  const rx = -Math.cos(ship.heading), ry = -Math.sin(ship.heading);
+  const n = sp > 160 ? 2 : 1;
+  for (let i = 0; i < n; i++) {
+    part(ship.x + rx * 12 + rnd(-2, 2), ship.y + ry * 12 + rnd(-2, 2),
+         rx * sp * 0.35 + rnd(-20, 20), ry * sp * 0.35 + rnd(-20, 20),
+         0.35, Math.random() < 0.5 ? '#ffb347' : '#ffe0a0', 3);
+  }
+}
+
+// ============ main step ============
+function autoActions(dt) {
+  if (R.autoFire) {
+    const n = nearestNpc(WEAPON_RANGE);
+    if (n && R.fireCool <= 0) fireAt(n);
+  }
+  if (R.autoMine) {
+    const a = nearestAst(MINE_RANGE);
+    if (a) mine(a, dt);
+  }
+}
+
 function step(dt) {
+  R.time += dt;
+  R.mining = false;
   R.fireCool -= dt;
+  R.hitFlash -= dt;
+  R.shake *= Math.exp(-dt * 9);
   if (R.shieldDelay > 0) R.shieldDelay -= dt;
   else P.shield = Math.min(st().shMax, P.shield + 10 * dt);
   updateSpawns(dt);
   updateRoute();
-  updateTarget(dt);
+  if (joy.active) {
+    joystickSteer(dt);
+  } else {
+    updateTarget(dt);
+    autoActions(dt);
+  }
   updateShip(dt);
   stepNpcs(dt);
+  thrusterFx(dt);
+  SND.engine(Math.min(1, Math.hypot(ship.vx, ship.vy) / st().speed));
+  if (R.mining && R.mineRef) { /* mining particles spawned in mine() */ }
   world.beams.forEach(b => b.life -= dt);
   world.beams = world.beams.filter(b => b.life > 0);
-  world.fx.forEach(f => f.life -= dt);
-  world.fx = world.fx.filter(f => f.life > 0);
+  world.rings.forEach(r => r.life -= dt);
+  world.rings = world.rings.filter(r => r.life > 0);
+  world.texts.forEach(t => { t.life -= dt; t.y -= 26 * dt; });
+  world.texts = world.texts.filter(t => t.life > 0);
+  updateParts(dt);
+  ZOOM = BASEZ * U.zoom;
   cam.x += (ship.x - cam.x) * Math.min(1, dt * 8);
   cam.y += (ship.y - cam.y) * Math.min(1, dt * 8);
   R.saveT += dt;
@@ -494,60 +787,174 @@ function step(dt) {
   if (R.hudT > 0.1) { R.hudT = 0; hud(); }
 }
 
-// ---------- drawing ----------
-function drawStars() {
+// ============ drawing ============
+function drawNebula() {
+  const neb = nebula(P.sysId);
+  const ox = ((-cam.x * 0.03) % 512 + 512) % 512;
+  const oy = ((-cam.y * 0.03) % 512 + 512) % 512;
+  for (let x = ox - 512; x < W + 512; x += 512) for (let y = oy - 512; y < H + 512; y += 512) {
+    ctx.drawImage(neb, x, y, 512, 512);
+  }
+}
+
+function drawStarLayers() {
   ctx.fillStyle = '#ffffff';
-  for (const s of stars) {
-    const x = ((s.x * W - cam.x * 0.12 * ZOOM) % W + W) % W;
-    const y = ((s.y * H - cam.y * 0.12 * ZOOM) % H + H) % H;
-    ctx.globalAlpha = 0.3 + 0.6 * s.a;
-    ctx.fillRect(x, y, s.s, s.s);
+  for (const L of starLayers) {
+    for (const s of L.pts) {
+      const sx = ((s.x - cam.x * L.f) % TILE + TILE) % TILE;
+      const sy = ((s.y - cam.y * L.f) % TILE + TILE) % TILE;
+      ctx.globalAlpha = s.a * (0.55 + 0.45 * Math.sin(R.time * s.tw + s.p));
+      for (let kx = -1; kx <= 1; kx++) for (let ky = -1; ky <= 1; ky++) {
+        const x = sx + kx * TILE, y = sy + ky * TILE;
+        if (x < -4 || y < -4 || x > W + 4 || y > H + 4) continue;
+        ctx.fillRect(x, y, s.s, s.s);
+      }
+    }
   }
   ctx.globalAlpha = 1;
+}
+
+function drawPlanet() {
+  const p = SYS[P.sysId].planet;
+  const g = ctx.createRadialGradient(p.x - p.r * 0.35, p.y - p.r * 0.35, p.r * 0.1, p.x, p.y, p.r);
+  g.addColorStop(0, p.c1); g.addColorStop(1, p.c2);
+  // atmosphere glow
+  const ag = ctx.createRadialGradient(p.x, p.y, p.r * 0.95, p.x, p.y, p.r * 1.12);
+  ag.addColorStop(0, 'rgba(160,210,255,0.25)'); ag.addColorStop(1, 'rgba(160,210,255,0)');
+  ctx.fillStyle = ag;
+  ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 1.12, 0, TAU); ctx.fill();
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+  if (p.bands) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.clip();
+    ctx.globalAlpha = 0.2;
+    for (let i = 0; i < p.bands; i++) {
+      ctx.fillStyle = i % 2 ? p.c1 : p.c2;
+      const y = p.y - p.r + (i + 0.5) * (2 * p.r / p.bands);
+      ctx.fillRect(p.x - p.r, y, 2 * p.r, p.r * 0.14);
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+  if (p.ring) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.scale(1, 0.28);
+    ctx.strokeStyle = p.ringCol;
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = p.r * 0.14;
+    ctx.beginPath(); ctx.arc(0, 0, p.r * 1.7, 0, TAU); ctx.stroke();
+    ctx.lineWidth = p.r * 0.06;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath(); ctx.arc(0, 0, p.r * 2.05, 0, TAU); ctx.stroke();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawGates() {
   const sys = SYS[P.sysId];
   ctx.textAlign = 'center';
+  const spin = R.time;
   for (const k in sys.gates) {
     const to = SYS[k];
     const a = sys.gates[k];
     const x = Math.cos(a) * GATE_R, y = Math.sin(a) * GATE_R;
     const col = secColor(to.sec);
-    ctx.strokeStyle = col; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(x, y, 48, 0, TAU); ctx.stroke();
-    ctx.globalAlpha = 0.15; ctx.fillStyle = col;
-    ctx.beginPath(); ctx.arc(x, y, 48, 0, TAU); ctx.fill();
+    // glow
+    const gg = ctx.createRadialGradient(x, y, 20, x, y, 90);
+    gg.addColorStop(0, col); gg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.18; ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(x, y, 90, 0, TAU); ctx.fill();
     ctx.globalAlpha = 1;
+    // rotating outer dashes
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(spin * 0.6);
+    ctx.strokeStyle = col; ctx.lineWidth = 3;
+    ctx.setLineDash([14, 10]);
+    ctx.beginPath(); ctx.arc(0, 0, 52, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.rotate(-spin * 1.4);
+    ctx.lineWidth = 2; ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.arc(0, 0, 36, 0, TAU); ctx.stroke();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    // inward particles
+    if (Math.random() < 0.25) {
+      const pa = rnd(0, TAU);
+      part(x + Math.cos(pa) * 60, y + Math.sin(pa) * 60, -Math.cos(pa) * 70, -Math.sin(pa) * 70, 0.7, col, 2);
+    }
     ctx.fillStyle = col; ctx.font = 'bold 13px system-ui';
-    ctx.fillText(to.name, x, y - 62);
+    ctx.fillText(to.name, x, y - 66);
     ctx.font = '11px system-ui';
-    ctx.fillText('sec ' + to.sec.toFixed(1), x, y + 66);
+    ctx.fillText('sec ' + to.sec.toFixed(1), x, y + 72);
   }
 }
 
 function drawStation() {
-  ctx.strokeStyle = '#3ea6ff'; ctx.lineWidth = 3; ctx.fillStyle = '#0f2236';
-  ctx.beginPath(); ctx.arc(0, 0, 46, 0, TAU); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.arc(0, 0, 26, 0, TAU); ctx.stroke();
+  const t = R.time;
+  // halo
+  const hg = ctx.createRadialGradient(0, 0, 40, 0, 0, 130);
+  hg.addColorStop(0, 'rgba(62,166,255,0.35)'); hg.addColorStop(1, 'rgba(62,166,255,0)');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, 130, 0, TAU); ctx.fill();
+  // rotating ring with arms
   ctx.save();
-  ctx.rotate(performance.now() / 9000);
-  ctx.fillStyle = '#3ea6ff';
-  for (let i = 0; i < 4; i++) { ctx.rotate(TAU / 4); ctx.fillRect(40, -4, 22, 8); }
+  ctx.rotate(t / 9);
+  ctx.strokeStyle = '#2b4f72'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(0, 0, 66, 0, TAU); ctx.stroke();
+  for (let i = 0; i < 6; i++) {
+    ctx.rotate(TAU / 6);
+    ctx.fillStyle = '#284a6c';
+    ctx.fillRect(40, -5, 28, 10);
+    const on = Math.sin(t * 3 + i) > 0;
+    ctx.fillStyle = on ? '#7fffd4' : '#ff6b6b';
+    ctx.beginPath(); ctx.arc(68, 0, 3, 0, TAU); ctx.fill();
+  }
   ctx.restore();
-  ctx.fillStyle = '#9ee6ff'; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center';
-  ctx.fillText('STATION', 0, -60);
+  // core hull
+  ctx.fillStyle = '#132a42';
+  ctx.strokeStyle = '#3ea6ff'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = i / 8 * TAU + Math.PI / 8;
+    const r = 46;
+    const x = Math.cos(a) * r, y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, 18, 0, TAU);
+  ctx.fillStyle = '#0a1d31'; ctx.fill();
+  ctx.strokeStyle = '#9ee6ff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#9ee6ff'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('STATION', 0, -78);
 }
+
+function drawPlanetRingsPlaceholder() {}
 
 function drawAsteroids() {
   for (const a of world.asts) {
-    ctx.globalAlpha = 0.35 + 0.65 * (a.ore / a.max);
-    ctx.fillStyle = a.kry ? '#4fd6c7' : '#8a7757';
-    ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, TAU); ctx.fill();
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.rot);
+    const base = a.kry ? '#4fd6c7' : '#8a7757';
+    const dark = a.kry ? '#1a4a48' : '#2a2418';
+    const g = ctx.createRadialGradient(-a.r * 0.4, -a.r * 0.4, a.r * 0.1, 0, 0, a.r * 1.1);
+    g.addColorStop(0, base); g.addColorStop(1, dark);
+    ctx.globalAlpha = 0.45 + 0.55 * (a.ore / a.max);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    a.pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = dark; ctx.stroke();
+    if (a.kry) {
+      ctx.fillStyle = '#b8fff4';
+      ctx.globalAlpha = 0.5 + 0.4 * Math.sin(R.time * 3 + a.x);
+      ctx.beginPath(); ctx.arc(a.r * 0.2, -a.r * 0.2, 2.2, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = a.kry ? '#1a4a48' : '#2a2418';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, TAU); ctx.stroke();
   }
 }
 
@@ -556,86 +963,229 @@ function drawNpcs() {
     ctx.save();
     ctx.translate(n.x, n.y);
     ctx.rotate(n.angle + Math.PI / 2);
-    ctx.fillStyle = '#e0524c';
-    ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(12, 12); ctx.lineTo(-12, 12); ctx.closePath(); ctx.fill();
+    if (n.aggro) {
+      const eg = ctx.createRadialGradient(0, 10, 0, 0, 10, 22);
+      eg.addColorStop(0, 'rgba(255,140,80,0.9)'); eg.addColorStop(1, 'rgba(255,140,80,0)');
+      ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(0, 10, 22, 0, TAU); ctx.fill();
+    }
+    ctx.fillStyle = '#5a1e1e'; ctx.strokeStyle = '#e0524c'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(13, 13); ctx.lineTo(0, 8); ctx.lineTo(-13, 13); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffb0a8';
+    ctx.beginPath(); ctx.arc(0, -2, 3, 0, TAU); ctx.fill();
     ctx.restore();
     const w = 40;
-    ctx.fillStyle = '#3a1212'; ctx.fillRect(n.x - w / 2, n.y - 30, w, 5);
-    ctx.fillStyle = '#e0524c'; ctx.fillRect(n.x - w / 2, n.y - 30, w * clamp(n.hp / n.max, 0, 1), 5);
+    ctx.fillStyle = '#3a1212'; ctx.fillRect(n.x - w / 2, n.y - 32, w, 5);
+    ctx.fillStyle = '#e0524c'; ctx.fillRect(n.x - w / 2, n.y - 32, w * clamp(n.hp / n.max, 0, 1), 5);
   }
 }
 
 function drawBeams() {
   for (const b of world.beams) {
-    ctx.globalAlpha = clamp(b.life / b.max, 0, 1);
-    ctx.strokeStyle = b.col; ctx.lineWidth = 2;
+    const a = clamp(b.life / b.max, 0, 1);
+    ctx.globalAlpha = a * 0.3; ctx.strokeStyle = b.col; ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+    ctx.globalAlpha = a; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  if (R.mining && R.target && R.target.kind === 'ast') {
-    const a = R.target.ref;
-    ctx.strokeStyle = '#7fffd4'; ctx.lineWidth = 2;
+  if (R.mining && R.mineRef) {
+    const a = R.mineRef;
+    const pulse = 0.7 + 0.3 * Math.sin(R.time * 30);
+    ctx.globalAlpha = 0.3 * pulse; ctx.strokeStyle = '#7fffd4'; ctx.lineWidth = 7;
     ctx.beginPath(); ctx.moveTo(ship.x, ship.y); ctx.lineTo(a.x, a.y); ctx.stroke();
+    ctx.globalAlpha = pulse; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(ship.x, ship.y); ctx.lineTo(a.x, a.y); ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 }
 
-function drawFx() {
-  for (const f of world.fx) {
-    const p = 1 - f.life / f.max;
-    ctx.globalAlpha = f.life / f.max;
-    ctx.strokeStyle = '#ff9e6b'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(f.x, f.y, f.r * p + 6, 0, TAU); ctx.stroke();
+function drawRingsFx() {
+  for (const r of world.rings) {
+    const p = 1 - r.life / r.max;
+    ctx.globalAlpha = clamp(r.life / r.max, 0, 1);
+    ctx.strokeStyle = '#ffd9a0'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(r.x, r.y, r.r * p + 8, 0, TAU); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawParts() {
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of world.parts) {
+    const a = clamp(p.life / p.max, 0, 1);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.col;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.4 + 0.6 * a), 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function drawTexts() {
+  ctx.font = 'bold 13px system-ui';
+  ctx.textAlign = 'center';
+  for (const t of world.texts) {
+    ctx.globalAlpha = clamp(t.life / t.max, 0, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillText(t.txt, t.x + 1, t.y + 1);
+    ctx.fillStyle = t.col;
+    ctx.fillText(t.txt, t.x, t.y);
   }
   ctx.globalAlpha = 1;
 }
 
 function drawShip() {
+  const sp = Math.hypot(ship.vx, ship.vy);
   ctx.save();
   ctx.translate(ship.x, ship.y);
-  ctx.rotate(ship.heading);
-  const sp = Math.hypot(ship.vx, ship.vy);
-  if (sp > 25) {
-    ctx.fillStyle = '#ffb347';
-    ctx.beginPath(); ctx.moveTo(-10, -4); ctx.lineTo(-10 - sp * 0.04, 0); ctx.lineTo(-10, 4); ctx.fill();
+  // shield bubble
+  const s = st();
+  const shFrac = clamp(P.shield / s.shMax, 0, 1);
+  if (shFrac > 0.02 || R.hitFlash > 0) {
+    const flashA = R.hitFlash > 0 ? R.hitFlash * 3 : 0;
+    ctx.globalAlpha = clamp(0.12 * shFrac + flashA, 0, 0.7);
+    ctx.strokeStyle = '#7fd9ff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, 24, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = clamp(0.08 * shFrac + flashA * 0.5, 0, 0.5);
+    ctx.fillStyle = '#7fd9ff';
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
-  ctx.fillStyle = '#9ee6ff';
-  ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-10, -10); ctx.lineTo(-6, 0); ctx.lineTo(-10, 10); ctx.closePath(); ctx.fill();
+  ctx.rotate(ship.heading);
+  if (sp > 25) {
+    const fl = 8 + sp * 0.03 + Math.sin(R.time * 40) * 2;
+    ctx.fillStyle = 'rgba(255,179,71,0.85)';
+    ctx.beginPath(); ctx.moveTo(-9, -4); ctx.lineTo(-9 - fl, 0); ctx.lineTo(-9, 4); ctx.fill();
+  }
+  // hull
+  const hg = ctx.createLinearGradient(-10, -10, 16, 10);
+  hg.addColorStop(0, '#5aa4d6'); hg.addColorStop(1, '#dff3ff');
+  ctx.fillStyle = hg;
+  ctx.strokeStyle = '#1a3a5c'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-10, -11); ctx.lineTo(-5, 0); ctx.lineTo(-10, 11); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // cockpit
+  ctx.fillStyle = '#0a1d31';
+  ctx.beginPath(); ctx.ellipse(3, 0, 4, 2.4, 0, 0, TAU); ctx.fill();
+  // hull damage smoke
+  const hfrac = P.hull / s.hullMax;
+  if (hfrac < 0.4 && Math.random() < 0.3) part(ship.x, ship.y, rnd(-10, 10), rnd(-30, -5), 0.6, '#667', 3);
   ctx.restore();
 }
 
 function drawTargetRing() {
   if (!R.target) return;
   const t = R.target;
-  const r = t.kind === 'ast' ? t.ref.r + 8 : t.kind === 'npc' ? 22 : t.kind === 'station' ? 52 : 56;
+  const r = t.kind === 'ast' ? t.ref.r + 10 : t.kind === 'npc' ? 26 : t.kind === 'station' ? 76 : 70;
   ctx.setLineDash([6, 6]);
-  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.85;
   ctx.beginPath(); ctx.arc(t.ref.x, t.ref.y, r, 0, TAU); ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+}
+
+function drawVignette() {
+  const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+
+function drawJoystick() {
+  ctx.save();
+  const showIdle = !joy.active;
+  if (showIdle) {
+    const bx = Math.max(90, W * 0.16), by = H - 150;
+    ctx.globalAlpha = 0.25; ctx.strokeStyle = '#9ee6ff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(bx, by, 56, 0, TAU); ctx.stroke();
+    ctx.fillStyle = 'rgba(158,230,255,0.08)'; ctx.fill();
+    ctx.globalAlpha = 0.5; ctx.fillStyle = '#9ee6ff'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('DRAG TO FLY', bx, by + 74);
+  } else {
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = '#9ee6ff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(joy.bx, joy.by, 70, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 0.7; ctx.fillStyle = '#9ee6ff';
+    ctx.beginPath(); ctx.arc(joy.kx, joy.ky, 26, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
 }
 
 function draw() {
+  const shake = R.shake;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = '#05070d';
   ctx.fillRect(0, 0, W, H);
-  drawStars();
+  drawNebula();
+  drawStarLayers();
+
   ctx.save();
-  ctx.translate(W / 2, H / 2);
+  const sx = shake > 0.2 ? rnd(-shake, shake) : 0;
+  const sy = shake > 0.2 ? rnd(-shake, shake) : 0;
+  ctx.translate(W / 2 + sx, H / 2 + sy);
   ctx.scale(ZOOM, ZOOM);
   ctx.translate(-cam.x, -cam.y);
-  ctx.font = 'bold 13px system-ui';
+  drawPlanet();
   drawGates();
   drawStation();
   drawAsteroids();
   drawNpcs();
   drawBeams();
-  drawFx();
+  drawRingsFx();
+  drawParts();
   drawShip();
   drawTargetRing();
+  drawTexts();
   ctx.restore();
+
+  drawVignette();
+  drawJoystick();
+  drawMini();
 }
 
-// ---------- HUD ----------
+// ============ minimap ============
+function drawMini() {
+  const S = mini.width, c = S / 2;
+  const MR = 1800, sc = (c - 6) / MR;
+  mctx.setTransform(1, 0, 0, 1, 0, 0);
+  mctx.clearRect(0, 0, S, S);
+  mctx.save();
+  mctx.beginPath(); mctx.arc(c, c, c - 2, 0, TAU); mctx.clip();
+  mctx.fillStyle = 'rgba(5,7,13,0.85)'; mctx.fillRect(0, 0, S, S);
+  const P2 = (x, y) => [c + (x - ship.x) * sc, c + (y - ship.y) * sc];
+  // gates
+  for (const k in SYS[P.sysId].gates) {
+    const g = gatePos(Number(k));
+    let [x, y] = P2(g.x, g.y);
+    const dx = x - c, dy = y - c, d = Math.hypot(dx, dy), lim = c - 10;
+    if (d > lim) { x = c + dx / d * lim; y = c + dy / d * lim; }
+    mctx.fillStyle = secColor(SYS[k].sec);
+    mctx.beginPath(); mctx.arc(x, y, 5, 0, TAU); mctx.fill();
+  }
+  // station
+  const [stx, sty] = P2(0, 0);
+  mctx.fillStyle = '#3ea6ff';
+  mctx.beginPath(); mctx.arc(stx, sty, 4, 0, TAU); mctx.fill();
+  // asteroids
+  mctx.fillStyle = 'rgba(200,180,130,0.8)';
+  for (const a of world.asts) { const [x, y] = P2(a.x, a.y); mctx.fillRect(x - 1, y - 1, 2, 2); }
+  // pirates
+  mctx.fillStyle = '#ff6b6b';
+  for (const n of world.npcs) { const [x, y] = P2(n.x, n.y); mctx.beginPath(); mctx.arc(x, y, 3, 0, TAU); mctx.fill(); }
+  // ship
+  mctx.save();
+  mctx.translate(c, c); mctx.rotate(ship.heading);
+  mctx.fillStyle = '#ffffff';
+  mctx.beginPath(); mctx.moveTo(8, 0); mctx.lineTo(-6, -5); mctx.lineTo(-3, 0); mctx.lineTo(-6, 5); mctx.closePath(); mctx.fill();
+  mctx.restore();
+  mctx.restore();
+  mctx.strokeStyle = '#1d3350'; mctx.lineWidth = 3;
+  mctx.beginPath(); mctx.arc(c, c, c - 2, 0, TAU); mctx.stroke();
+}
+
+// ============ HUD ============
 function statusText() {
+  if (joy.active) return 'Manual flight';
   if (R.mining && R.target) return 'Mining ' + (R.target.ref.kry ? 'Krysite' : 'Veldite');
+  if (R.mining && R.mineRef) return 'Mining ' + (R.mineRef.kry ? 'Krysite' : 'Veldite');
   if (R.target) {
     const k = R.target.kind;
     if (k === 'npc') return 'Engaging pirate';
@@ -644,6 +1194,8 @@ function statusText() {
     return 'Docking';
   }
   if (R.route != null) return 'Autopilot to ' + SYS[R.route].name;
+  if (R.autoMine && cargoUsed() >= st().cargoMax) return 'Cargo full';
+  if (R.autoFire || R.autoMine) return 'Standby' + (R.autoFire ? ' · guns hot' : '');
   return R.dest ? 'Moving' : 'Idle';
 }
 
@@ -659,10 +1211,14 @@ function hud() {
   $('bfu').style.width = pct(P.fuel, s.fuelMax);
   $('cargo').textContent = `Cargo ${cargoUsed()}/${s.cargoMax}`;
   $('status').textContent = R.panel ? '' : statusText();
-  $('bStop').classList.toggle('hide', !(R.target || R.dest || R.route != null));
+  $('bFire').classList.toggle('on', R.autoFire);
+  $('bMine').classList.toggle('on', R.autoMine);
+  $('bWarp').classList.toggle('on', R.route != null || (R.target && R.target.kind === 'gate'));
+  $('bDock').classList.toggle('on', R.target && R.target.kind === 'station');
+  $('bStop').classList.toggle('hide', !(R.target || R.dest || R.route != null || R.autoFire || R.autoMine));
 }
 
-// ---------- panels ----------
+// ============ panels ============
 function openPanel(kind, title, html) {
   R.panel = kind;
   $('ptitle').textContent = title;
@@ -709,7 +1265,7 @@ function stationHTML() {
       <div class="item"><div><b>Refuel</b><div class="dim">${fmt(P.fuel)}/${s.fuelMax}</div></div>
         <button data-act="refuel" ${fCost <= 0 || P.credits < fCost ? 'disabled' : ''}>${fCost > 0 ? fmt(fCost) + ' cr' : 'OK'}</button></div>
     </div>
-    <button class="wide" data-act="undock">Undock</button>`;
+    <button class="wide good" data-act="undock">Undock</button>`;
 }
 
 function openStation() {
@@ -726,6 +1282,8 @@ function sell(k) {
   const gain = n * unitPrice(k);
   P.credits += gain;
   P.cargo[k] = 0;
+  SND.coin();
+  R.fullWarn = false;
   log(`Sold ${n} ${k} for ${fmt(gain)} cr.`);
 }
 
@@ -740,6 +1298,7 @@ function buy(k) {
   const s = st();
   if (k === 'armor') P.hull = Math.min(s.hullMax, P.hull + 40);
   if (k === 'shield') P.shield = Math.min(s.shMax, P.shield + 30);
+  SND.buy();
   log(`Installed ${u.name} Lv ${P.levels[k]}.`);
 }
 
@@ -749,6 +1308,7 @@ function repair() {
   if (cost <= 0 || P.credits < cost) return;
   P.credits -= cost;
   P.hull = s.hullMax; P.shield = s.shMax;
+  SND.buy();
   log(`Hull repaired for ${fmt(cost)} cr.`);
 }
 
@@ -758,7 +1318,18 @@ function refuel() {
   if (cost <= 0 || P.credits < cost) return;
   P.credits -= cost;
   P.fuel = s.fuelMax;
+  SND.buy();
   log(`Refueled for ${fmt(cost)} cr.`);
+}
+
+async function install() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    try { await deferredPrompt.userChoice; } catch (e) {}
+    deferredPrompt = null;
+    return;
+  }
+  log('Use your browser menu: Install app / Add to Home screen.');
 }
 
 $('pbody').addEventListener('click', e => {
@@ -771,6 +1342,7 @@ $('pbody').addEventListener('click', e => {
   else if (a === 'refuel') refuel();
   else if (a === 'undock') { closePanel(); return; }
   else if (a === 'clearroute') { R.route = null; log('Route cleared.'); openMap(); return; }
+  else if (a === 'install') { install(); return; }
   else if (a === 'reset') {
     if (confirm('Erase all Hollow Reach progress?')) { localStorage.removeItem(SAVE_KEY); location.reload(); }
     return;
@@ -781,7 +1353,7 @@ $('pbody').addEventListener('click', e => {
 
 $('pclose').addEventListener('click', closePanel);
 
-// ---------- map ----------
+// ============ map ============
 let mapPos = [];
 function openMap() {
   openPanel('map', 'Galaxy Map',
@@ -861,11 +1433,14 @@ function drawMap() {
   if (info) {
     info.textContent = route
       ? `Route: ${route.length - 1} jump(s) to ${SYS[R.route].name}. Autopilot warps through gates.`
-      : 'Tap a system to plot an autopilot route. Current system is ringed.';
+      : 'Tap a system to plot an autopilot route. Your current system is ringed.';
   }
 }
 
-// ---------- input ----------
+// ============ input ============
+const ptr = new Map();
+let joyId = null, tapId = null, tapMoved = false, pinchD0 = 1, pinchZ0 = 1;
+
 function toWorld(x, y) {
   return { x: (x - W / 2) / ZOOM + cam.x, y: (y - H / 2) / ZOOM + cam.y };
 }
@@ -875,43 +1450,122 @@ function pick(p) {
   let best = null, bd = tol;
   const consider = (d, obj) => { if (d < bd) { bd = d; best = obj; } };
   const ds = Math.hypot(p.x, p.y);
-  if (ds <= 60) consider(ds, { kind: 'station', ref: { x: 0, y: 0 } });
+  if (ds <= 70) consider(ds, { kind: 'station', ref: { x: 0, y: 0 } });
   for (const k in SYS[P.sysId].gates) {
     const pos = gatePos(Number(k));
     const d = dist(p, pos);
-    if (d <= 60) consider(d, { kind: 'gate', to: Number(k), ref: pos });
+    if (d <= 70) consider(d, { kind: 'gate', to: Number(k), ref: pos });
   }
   for (const n of world.npcs) {
     const d = dist(p, n);
-    if (d <= 30) consider(d, { kind: 'npc', ref: n });
+    if (d <= 34) consider(d, { kind: 'npc', ref: n });
   }
   for (const a of world.asts) {
     const d = dist(p, a) - a.r;
-    if (d <= 20) consider(d, { kind: 'ast', ref: a });
+    if (d <= 22) consider(d, { kind: 'ast', ref: a });
   }
   return best;
 }
 
-canvas.addEventListener('pointerdown', e => {
-  if (R.panel) return;
-  const p = toWorld(e.clientX, e.clientY);
+function doTap(x, y) {
+  const p = toWorld(x, y);
   const hit = pick(p);
   R.route = null;
+  R.mining = false;
   if (!hit) {
-    R.target = null; R.mining = false;
+    R.target = null;
     R.dest = { x: p.x, y: p.y }; R.stop = 0;
     return;
   }
   R.target = hit;
-  R.mining = false;
   R.dest = hit.ref; R.stop = 0;
+}
+
+canvas.addEventListener('pointerdown', e => {
+  if (R.panel) return;
+  canvas.setPointerCapture(e.pointerId);
+  ptr.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY });
+  const inJoyZone = e.clientX < W * 0.5 && e.clientY > H * 0.35;
+  if (inJoyZone && joyId === null) {
+    joyId = e.pointerId;
+    joy.active = true;
+    joy.bx = e.clientX; joy.by = e.clientY;
+    joy.kx = e.clientX; joy.ky = e.clientY;
+    joy.dx = 0; joy.dy = 0; joy.mag = 0;
+    R.target = null; R.dest = null; R.route = null;
+    tapId = null;
+    return;
+  }
+  const nj = [...ptr.keys()].filter(id => id !== joyId);
+  if (nj.length === 1) { tapId = e.pointerId; tapMoved = false; }
+  if (nj.length === 2) {
+    const [a, b] = nj.map(id => ptr.get(id));
+    pinchD0 = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    pinchZ0 = U.zoom;
+    tapMoved = true;
+  }
 });
 
-$('bMap').addEventListener('click', openMap);
-$('bLog').addEventListener('click', () => {
-  openPanel('log', 'Log',
-    R.msgs.map(m => `<div class="msg"><span class="dim">${m.t}</span> ${m.m}</div>`).join('') +
-    `<button class="wide danger" data-act="reset">Reset universe</button>`);
+canvas.addEventListener('pointermove', e => {
+  const p = ptr.get(e.pointerId);
+  if (!p) return;
+  p.x = e.clientX; p.y = e.clientY;
+  if (e.pointerId === joyId) {
+    const dx = p.x - joy.bx, dy = p.y - joy.by;
+    const d = Math.hypot(dx, dy) || 1;
+    joy.mag = Math.min(1, d / 70);
+    joy.dx = dx / d; joy.dy = dy / d;
+    joy.kx = joy.bx + joy.dx * Math.min(d, 70);
+    joy.ky = joy.by + joy.dy * Math.min(d, 70);
+    return;
+  }
+  if (Math.hypot(p.x - p.sx, p.y - p.sy) > 14) tapMoved = true;
+  const nj = [...ptr.keys()].filter(id => id !== joyId).map(id => ptr.get(id));
+  if (nj.length === 2) {
+    const d = Math.hypot(nj[0].x - nj[1].x, nj[0].y - nj[1].y);
+    U.zoom = clamp(pinchZ0 * d / pinchD0, 0.6, 2.2);
+  }
+});
+
+function endPtr(e) {
+  if (!ptr.has(e.pointerId)) return;
+  const p = ptr.get(e.pointerId);
+  ptr.delete(e.pointerId);
+  if (e.pointerId === joyId) {
+    joyId = null; joy.active = false; joy.mag = 0;
+    return;
+  }
+  if (e.pointerId === tapId && !tapMoved && !R.panel) doTap(p.x, p.y);
+  if (e.pointerId === tapId) tapId = null;
+}
+canvas.addEventListener('pointerup', endPtr);
+canvas.addEventListener('pointercancel', endPtr);
+
+// action buttons
+$('bFire').addEventListener('click', () => {
+  R.autoFire = !R.autoFire;
+  SND.click();
+  log(R.autoFire ? 'Guns online. Firing at pirates in range.' : 'Guns offline.');
+});
+$('bMine').addEventListener('click', () => {
+  R.autoMine = !R.autoMine;
+  SND.click();
+  R.fullWarn = false;
+  log(R.autoMine ? 'Mining laser on. Fly within range of rocks.' : 'Mining laser off.');
+});
+$('bWarp').addEventListener('click', () => {
+  if (R.route != null) { R.route = null; log('Autopilot cancelled.'); return; }
+  let best = null, bd = Infinity;
+  for (const k in SYS[P.sysId].gates) {
+    const pos = gatePos(Number(k));
+    const d = dist(ship, pos);
+    if (d < bd) { bd = d; best = { to: Number(k), pos }; }
+  }
+  if (!best) return;
+  R.target = { kind: 'gate', to: best.to, ref: best.pos };
+  R.dest = best.pos; R.stop = 20;
+  R.mining = false;
+  log(`Warping to ${SYS[best.to].name}...`);
 });
 $('bDock').addEventListener('click', () => {
   R.route = null;
@@ -921,27 +1575,65 @@ $('bDock').addEventListener('click', () => {
 });
 $('bStop').addEventListener('click', () => {
   R.target = null; R.dest = null; R.route = null; R.mining = false;
+  R.autoFire = false; R.autoMine = false;
   log('Stopped.');
 });
-
-// map buttons inside panel also route through data-act; closemap handled here
-document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act="closemap"]');
-  if (b) closePanel();
+$('bMap').addEventListener('click', openMap);
+$('bSnd').addEventListener('click', () => {
+  SND.init();
+  SND.setOn(!SND.on);
+  $('bSnd').textContent = SND.on ? 'Sound on' : 'Sound off';
+  if (SND.on) SND.click();
+});
+$('bLog').addEventListener('click', () => {
+  const canInstall = !!deferredPrompt;
+  openPanel('log', 'Log',
+    `<div class="sec"><h3>Install</h3>
+       <p class="tip">Play full screen from your home screen like a native app. ${canInstall ? 'Your browser can install it now.' : 'On Android Chrome: open the ⋮ menu and choose "Install app" or "Add to Home screen".'}</p>
+       <button class="wide good" data-act="install">Install Hollow Reach</button>
+     </div>
+     <div class="sec"><h3>Controls</h3>
+       <p class="tip">Drag in the lower-left to fly. Tap a rock to mine it, a pirate to attack it, the station to dock, or a ring to warp. Use FIRE and MINE to shoot and mine while you fly. Pinch to zoom.</p>
+     </div>
+     <div class="sec"><h3>Journal</h3>${R.msgs.map(m => `<div class="msg"><span class="dim">${m.t}</span> ${m.m}</div>`).join('')}</div>
+     <button class="wide danger" data-act="reset">Reset universe</button>`);
 });
 
-// ---------- loop ----------
+$('bFire').addEventListener('pointerdown', e => e.stopPropagation());
+
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-act="closemap"]')) closePanel();
+});
+
+// ============ PWA ============
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  log('Hollow Reach installed. Launch it from your home screen.');
+});
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
+// ============ loop ============
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
   last = now;
   if (R.panel !== 'station' && R.panel !== 'map') step(dt);
   draw();
+  if (R.panel === 'map') drawMap();
   requestAnimationFrame(loop);
 }
 
 populate();
-log('Welcome to Hollow Reach. Tap rocks to mine, ships to attack, the station to dock, rings to warp.');
+$('bSnd').textContent = SND.on ? 'Sound on' : 'Sound off';
+ZOOM = BASEZ * U.zoom;
+log('Welcome to Hollow Reach. Drag to fly. Tap rocks, pirates, the station or rings.');
 hud();
 requestAnimationFrame(loop);
 })();
