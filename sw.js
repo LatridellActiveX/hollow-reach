@@ -1,5 +1,5 @@
 // Hollow Reach service worker: caches the app shell so the game runs offline after the first visit.
-const CACHE = 'hollow-reach-v4';
+const CACHE = 'hollow-reach-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -25,18 +25,18 @@ self.addEventListener('activate', event => {
   );
 });
 
+// Network-first: new builds and version.json are always fetched when online; the cache is only the offline fallback.
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  if (new URL(req.url).origin !== self.location.origin) return;
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(res => {
-        if (res.ok && new URL(event.request.url).origin === self.location.origin) {
-          const copy = res.clone();
-          caches.open(CACHE).then(cache => cache.put(event.request, copy));
-        }
-        return res;
-      }).catch(() => caches.match('./index.html'));
-    })
+    fetch(req).then(res => {
+      if (res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then(cache => cache.put(req, copy));
+      }
+      return res;
+    }).catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
   );
 });

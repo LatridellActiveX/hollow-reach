@@ -60,6 +60,13 @@ h3{margin:6px 0;color:#9ee6ff;font-size:12px;text-transform:uppercase;letter-spa
 #mapc{width:100%;height:50vh;display:block;touch-action:none;border:1px solid #1d3350;border-radius:12px;background:#070c16}
 #mapinfo{margin:8px 0;font-size:13px}
 .tip{font-size:13px;color:#b9cbe0;line-height:1.5;margin:6px 0}
+.notes{margin:4px 0 6px;padding-left:18px;color:#b9cbe0;font-size:13px;line-height:1.5}
+.tag{font-size:10px;font-weight:800;letter-spacing:.08em;padding:4px 8px;border-radius:6px;border:1px solid;white-space:nowrap}
+.tag.new{color:#7fffd4;border-color:#7fffd4;background:#7fffd41a}
+.tag.ok{color:#9fb6d0;border-color:#2a4a6e}
+details.hist{margin:4px 0;border-top:1px solid #101c2e;padding:6px 0}
+details.hist summary{cursor:pointer;color:#9ee6ff;font-size:13px}
+#bUpd.upd{border-color:#7fffd4;color:#7fffd4;box-shadow:0 0 12px #7fffd488}
 </style>
 </head>
 <body>
@@ -81,6 +88,7 @@ h3{margin:6px 0;color:#9ee6ff;font-size:12px;text-transform:uppercase;letter-spa
 <div id="menu">
   <button id="bMap" class="sm">Map</button>
   <button id="bSnd" class="sm">Sound on</button>
+  <button id="bUpd" class="sm">Updates</button>
   <button id="bLog" class="sm">Log</button>
 </div>
 
@@ -114,6 +122,10 @@ const WEAPON_RANGE = 340;
 const DOCK_RANGE = 110;
 const TILE = 1024;
 const SAVE_KEY = 'hollowReach.v2';
+// bump version/build (and version.json) on every release
+const APP = { version: '1.3.0', build: 4, date: '2026-10-21' };
+const UPDATE_URL = 'version.json';
+const UPDATE_CHECK_MS = 30 * 60 * 1000;
 
 const UPG = [
   { k: 'cannon', name: 'Pulse Cannon',       base: 600, desc: '+8 damage per level' },
@@ -1505,6 +1517,9 @@ $('pbody').addEventListener('click', e => {
   else if (a === 'undock') { closePanel(); return; }
   else if (a === 'clearroute') { R.route = null; log('Route cleared.'); openMap(); return; }
   else if (a === 'install') { install(); return; }
+  else if (a === 'checkupd') { checkUpdates(true); return; }
+  else if (a === 'setchan') { setChannel(b.dataset.k); return; }
+  else if (a === 'applyupd') { applyUpdate(); return; }
   else if (a === 'reset') {
     if (confirm('Erase all Hollow Reach progress?')) { localStorage.removeItem(SAVE_KEY); location.reload(); }
     return;
@@ -1765,6 +1780,117 @@ $('bFire').addEventListener('pointerdown', e => e.stopPropagation());
 
 document.addEventListener('click', e => {
   if (e.target.closest('[data-act="closemap"]')) closePanel();
+});
+
+// ============ updates ============
+const CHANNELS = ['stable', 'beta'];
+const UPD = { latest: null, checkedAt: 0, checking: false, error: null, available: null };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function channel() { try { return localStorage.getItem('hollowReach.channel') || 'stable'; } catch (e) { return 'stable'; } }
+
+function refreshUpdateBadge() {
+  const ch = UPD.latest && UPD.latest.channels && UPD.latest.channels[channel()];
+  UPD.available = ch && ch.build > APP.build ? ch : null;
+  const b = $('bUpd');
+  b.classList.toggle('upd', !!UPD.available);
+  b.textContent = UPD.available ? 'Update' : 'Updates';
+}
+
+async function checkUpdates(manual) {
+  if (UPD.checking) return;
+  UPD.checking = true; UPD.error = null;
+  renderUpdates();
+  try {
+    const res = await fetch(UPDATE_URL + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data || typeof data.channels !== 'object') throw new Error('bad manifest');
+    UPD.latest = data;
+    UPD.checkedAt = Date.now();
+  } catch (e) {
+    UPD.error = navigator.onLine === false ? 'Offline. Showing last known builds.' : 'Could not reach the update server.';
+  }
+  UPD.checking = false;
+  const wasAvail = UPD.available;
+  refreshUpdateBadge();
+  renderUpdates();
+  if (UPD.available && !wasAvail && !manual) log(`Update ${UPD.available.version} (build ${UPD.available.build}) is available.`);
+}
+
+function setChannel(k) {
+  try { localStorage.setItem('hollowReach.channel', k); } catch (e) {}
+  refreshUpdateBadge();
+  renderUpdates();
+}
+
+async function applyUpdate() {
+  const ch = UPD.available;
+  if (!ch) return;
+  if (ch.url) {
+    const t = new URL(ch.url, location.href);
+    if (t.origin !== location.origin) { location.href = t.href; return; }
+  }
+  log('Updating…');
+  save();
+  try {
+    if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
+    if ('serviceWorker' in navigator) { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); }
+  } catch (e) {}
+  location.reload();
+}
+
+const notesHTML = list => `<ul class="notes">${(list || []).map(n => `<li>${esc(n)}</li>`).join('')}</ul>`;
+
+function channelCard(name, ch, isCur) {
+  if (!ch) return `<div class="sec"><h3>${esc(name)}</h3><div class="dim">No builds published on this channel yet.</div></div>`;
+  const newer = ch.build > APP.build;
+  const hist = (ch.history || []).map(h =>
+    `<details class="hist"><summary>v${esc(h.version)} · build ${h.build} · ${esc(h.date)}</summary>${notesHTML(h.notes)}</details>`).join('');
+  return `<div class="sec">
+    <div class="item">
+      <div><h3 style="margin:0">${esc(name)}${isCur ? ' · yours' : ''}</h3>
+        <div class="dim">Latest v${esc(ch.version)} · build ${ch.build} · ${esc(ch.date)}</div></div>
+      <span class="tag ${newer ? 'new' : 'ok'}">${newer ? 'UPDATE' : 'CURRENT'}</span>
+    </div>
+    ${notesHTML(ch.notes)}
+    ${hist ? `<div class="dim" style="margin:8px 0 2px">Earlier builds</div>${hist}` : ''}
+  </div>`;
+}
+
+function renderUpdates() {
+  if (R.panel !== 'updates') return;
+  const cur = channel();
+  const chs = (UPD.latest && UPD.latest.channels) || {};
+  const status = UPD.checking ? 'Checking for updates…'
+    : UPD.error ? esc(UPD.error)
+    : UPD.checkedAt ? 'Last checked ' + new Date(UPD.checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : 'Not checked yet';
+  $('pbody').innerHTML = `
+    <div class="sec">
+      <div class="item"><div><b>You're on v${esc(APP.version)}</b>
+        <div class="dim">Build ${APP.build} · ${esc(cur)} channel · released ${esc(APP.date)}</div></div></div>
+      <div class="dim">${status}</div>
+      <div class="row" style="margin-top:10px">
+        <button data-act="checkupd" ${UPD.checking ? 'disabled' : ''}>Check now</button>
+        ${UPD.available ? `<button class="good" data-act="applyupd">Update to ${esc(UPD.available.version)}</button>` : ''}
+      </div>
+    </div>
+    <div class="sec"><h3>Channel</h3>
+      <div class="row">${CHANNELS.map(c => `<button data-act="setchan" data-k="${c}" class="${c === cur ? 'good' : ''}">${esc(c)}</button>`).join('')}</div>
+      <div class="dim" style="margin-top:6px">Beta builds come first and may be less stable.</div>
+    </div>
+    ${CHANNELS.map(c => channelCard(c, chs[c], c === cur)).join('')}`;
+}
+
+$('bUpd').addEventListener('click', () => {
+  openPanel('updates', 'Updates', '');
+  renderUpdates();
+  checkUpdates(true);
+});
+setTimeout(() => checkUpdates(false), 2500);
+setInterval(() => checkUpdates(false), UPDATE_CHECK_MS);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && Date.now() - UPD.checkedAt > 10 * 60 * 1000) checkUpdates(false);
 });
 
 // ============ PWA ============
