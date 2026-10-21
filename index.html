@@ -490,7 +490,9 @@ function fireAt(n) {
   SND.laser();
   const dmg = s.dmg * rnd(0.9, 1.1);
   n.hp -= dmg;
-  beam(ship.x, ship.y, n.x, n.y, '#9ee6ff', 0.12);
+  const k = R.side || 1; R.side = -k;
+  const m = shipPoint(5, -11 * k);
+  beam(m.x, m.y, n.x, n.y, '#9ee6ff', 0.2);
   burst(n.x, n.y, '#ffd0a0', 4, 70, 0.3);
   text(n.x, n.y - 30, '-' + Math.round(dmg), '#9ee6ff');
   if (n.hp <= 0) killNpc(n);
@@ -598,7 +600,7 @@ function stepNpcs(dt) {
     if (n.aggro && d < 260 && n.fire <= 0) {
       n.fire = 1.4;
       const dmg = (6 + n.tier * 4) * rnd(0.8, 1.2);
-      beam(n.x, n.y, ship.x, ship.y, '#ff6b6b', 0.12);
+      beam(n.x, n.y, ship.x, ship.y, '#ff6b6b', 0.2);
       burst(n.x, n.y, '#ff8a8a', 4, 60, 0.25);
       if (hitPlayer(dmg)) return;
     }
@@ -779,6 +781,7 @@ function step(dt) {
     autoActions(dt);
   }
   updateShip(dt);
+  updateTurret(dt);
   stepNpcs(dt);
   thrusterFx(dt);
   SND.engine(Math.min(1, Math.hypot(ship.vx, ship.vy) / st().speed));
@@ -1119,24 +1122,105 @@ function drawNpcs() {
   }
 }
 
+// ============ ship scale, mining turret, lasers ============
+const SHIP_S = 1.4;                 // ship draw scale
+const TUR = { a: 0 };               // mining turret aim, world radians
+function shipPoint(x, y) {
+  const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+  return { x: ship.x + (x * c - y * s) * SHIP_S, y: ship.y + (x * s + y * c) * SHIP_S };
+}
+function turretMuzzle() {
+  const b = shipPoint(-7, 0);
+  return { x: b.x + Math.cos(TUR.a) * 12 * SHIP_S, y: b.y + Math.sin(TUR.a) * 12 * SHIP_S };
+}
+function updateTurret(dt) {
+  let want = ship.heading;
+  if (R.mining && R.mineRef) want = Math.atan2(R.mineRef.y - ship.y, R.mineRef.x - ship.x);
+  else if (R.target && R.target.kind === 'npc') want = Math.atan2(R.target.ref.y - ship.y, R.target.ref.x - ship.x);
+  const d = Math.atan2(Math.sin(want - TUR.a), Math.cos(want - TUR.a));
+  TUR.a += d * Math.min(1, dt * 7);
+}
+
+// continuous mining beam: crackling core, traveling energy pulses, glow at the muzzle
+function drawMiningBeam() {
+  if (!R.mining || !R.mineRef) return;
+  const a = R.mineRef;
+  const m = turretMuzzle();
+  const dx = a.x - m.x, dy = a.y - m.y;
+  const L = Math.hypot(dx, dy) || 1;
+  const nx = -dy / L, ny = dx / L;
+  const pulse = 0.75 + 0.25 * Math.sin(R.time * 30);
+  const pts = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    const j = (i === 0 || i === 8) ? 0 : rnd(-3, 3);
+    pts.push([m.x + dx * t + nx * j, m.y + dy * t + ny * j]);
+  }
+  const strokePts = () => {
+    ctx.beginPath();
+    pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+    ctx.stroke();
+  };
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#7fffd4'; ctx.globalAlpha = 0.25 * pulse; ctx.lineWidth = 8; strokePts();
+  ctx.globalAlpha = 0.7 * pulse; ctx.lineWidth = 2.4; strokePts();
+  ctx.strokeStyle = '#e8fff9'; ctx.globalAlpha = pulse; ctx.lineWidth = 1; strokePts();
+  for (let i = 0; i < 3; i++) {
+    const t = (R.time * 1.6 + i / 3) % 1;
+    ctx.fillStyle = '#ccfff2'; ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(m.x + dx * t, m.y + dy * t, 2, 0, TAU); ctx.fill();
+  }
+  const mg = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, 7);
+  mg.addColorStop(0, 'rgba(200,255,240,0.9)'); mg.addColorStop(1, 'rgba(127,255,212,0)');
+  ctx.globalAlpha = pulse; ctx.fillStyle = mg;
+  ctx.beginPath(); ctx.arc(m.x, m.y, 7, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+}
+
+// laser bolts: each shot is a glowing bolt that travels from the hardpoint to its target
 function drawBeams() {
+  ctx.lineCap = 'round';
+  ctx.globalCompositeOperation = 'lighter';
   for (const b of world.beams) {
-    const a = clamp(b.life / b.max, 0, 1);
-    ctx.globalAlpha = a * 0.3; ctx.strokeStyle = b.col; ctx.lineWidth = 7;
+    const life = clamp(b.life / b.max, 0, 1);
+    const p = 1 - life;
+    const dx = b.x2 - b.x1, dy = b.y2 - b.y1;
+    const head = clamp(p * 2.4, 0, 1);
+    const tail = clamp(p * 2.4 - 0.5, 0, 1);
+    const hx = b.x1 + dx * head, hy = b.y1 + dy * head;
+    const tx = b.x1 + dx * tail, ty = b.y1 + dy * tail;
+    // faint full trace
+    ctx.strokeStyle = b.col;
+    ctx.globalAlpha = 0.12 * life; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
-    ctx.globalAlpha = a; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+    // bolt: wide glow, colored body, white-hot core
+    ctx.globalAlpha = 0.35 * life; ctx.lineWidth = 10;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.globalAlpha = 0.9 * life; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = life; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+    // muzzle flash
+    if (p < 0.5) {
+      const mr = 6 + (0.5 - p) * 20;
+      const mg = ctx.createRadialGradient(b.x1, b.y1, 0, b.x1, b.y1, mr);
+      mg.addColorStop(0, b.col); mg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.9 * (1 - p * 2);
+      ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(b.x1, b.y1, mr, 0, TAU); ctx.fill();
+    }
+    // impact bloom once the bolt lands
+    if (head >= 1) {
+      const ir = 8 + p * 14;
+      const ig = ctx.createRadialGradient(b.x2, b.y2, 0, b.x2, b.y2, ir);
+      ig.addColorStop(0, '#ffffff'); ig.addColorStop(0.4, b.col); ig.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = life;
+      ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(b.x2, b.y2, ir, 0, TAU); ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
-  if (R.mining && R.mineRef) {
-    const a = R.mineRef;
-    const pulse = 0.7 + 0.3 * Math.sin(R.time * 30);
-    ctx.globalAlpha = 0.3 * pulse; ctx.strokeStyle = '#7fffd4'; ctx.lineWidth = 7;
-    ctx.beginPath(); ctx.moveTo(ship.x, ship.y); ctx.lineTo(a.x, a.y); ctx.stroke();
-    ctx.globalAlpha = pulse; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(ship.x, ship.y); ctx.lineTo(a.x, a.y); ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.lineCap = 'butt';
+  drawMiningBeam();
 }
 
 function drawRingsFx() {
@@ -1203,13 +1287,13 @@ function drawShip() {
   // ---- shield: hex lattice clipped to a bubble, world-aligned ----
   if (shFrac > 0.02 || fa > 0) {
     ctx.save();
-    ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.clip();
+    ctx.beginPath(); ctx.arc(0, 0, 40, 0, TAU); ctx.clip();
     ctx.fillStyle = `rgba(127,217,255,${0.05 * shFrac + fa * 0.2})`;
-    ctx.fillRect(-32, -32, 64, 64);
+    ctx.fillRect(-44, -44, 88, 88);
     ctx.strokeStyle = `rgba(127,217,255,${0.22 * shFrac + fa * 0.6})`;
     ctx.lineWidth = 1;
     const hs = 5;
-    for (let r = -4; r <= 4; r++) for (let q = -4; q <= 4; q++) {
+    for (let r = -6; r <= 6; r++) for (let q = -6; q <= 6; q++) {
       const hx = q * hs * 1.5, hy = (r + q * 0.5) * hs * 1.732;
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
@@ -1224,13 +1308,13 @@ function drawShip() {
     ctx.rotate(t * 0.8);
     ctx.setLineDash([10, 8]); ctx.lineWidth = 2;
     ctx.strokeStyle = `rgba(158,230,255,${0.2 + 0.5 * shFrac + fa * 0.5})`;
-    ctx.beginPath(); ctx.arc(0, 0, 31, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 41, 0, TAU); ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
   }
 
   ctx.rotate(ship.heading);
-  ctx.scale(0.9, 0.9);
+  ctx.scale(SHIP_S, SHIP_S);
 
   // ---- engine glow and exhaust flames (flicker, grow with speed) ----
   for (const ey of [-10.5, 10.5]) {
@@ -1353,14 +1437,50 @@ function drawShip() {
 
   // ---- spinning radar dish with blinking beacon ----
   ctx.strokeStyle = '#9fd3f2'; ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.moveTo(-7, -3.5); ctx.lineTo(-7, -7.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(6, -3.5); ctx.lineTo(6, -8); ctx.stroke();
   ctx.save();
-  ctx.translate(-7, -8); ctx.rotate(t * 2.2); ctx.scale(1, 0.4);
+  ctx.translate(6, -9.5); ctx.rotate(t * 2.2); ctx.scale(1, 0.4);
   ctx.fillStyle = '#cfeeff';
   ctx.beginPath(); ctx.arc(0, 0, 3.4, 0, TAU); ctx.fill();
   ctx.restore();
   ctx.fillStyle = Math.sin(t * 6) > 0 ? '#ff6b6b' : '#5a2a2a';
-  ctx.beginPath(); ctx.arc(-7, -8, 0.9, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, -9.5, 0.9, 0, TAU); ctx.fill();
+
+  // ---- mining turret: swivels toward its work, drill spins while mining ----
+  {
+    const aim = TUR.a - ship.heading;
+    ctx.save();
+    ctx.translate(-7, 0);
+    ctx.fillStyle = '#16324d';
+    ctx.beginPath(); ctx.arc(0, 0, 5.2, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#0b1c2e'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = 'rgba(127,255,212,0.75)'; ctx.lineWidth = 1.2;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath(); ctx.arc(0, 0, 4.1, i * TAU / 4 + 0.25, (i + 1) * TAU / 4 - 0.25); ctx.stroke();
+    }
+    ctx.rotate(aim);
+    // swivel head
+    polyPath([[-2, -3.6], [3, -2.8], [5, -1.4], [5, 1.4], [3, 2.8], [-2, 3.6]]);
+    ctx.fillStyle = '#23506f'; ctx.fill();
+    ctx.strokeStyle = '#0a1a2c'; ctx.lineWidth = 0.9; ctx.stroke();
+    // twin barrels with glowing muzzles while mining
+    for (const k of [-1, 1]) {
+      const y0 = 1.9 * k;
+      polyPath([[4, y0 - 0.8], [12, y0 - 0.8], [12, y0 + 0.8], [4, y0 + 0.8]]);
+      ctx.fillStyle = '#0f2236'; ctx.fill(); ctx.stroke();
+      ctx.fillStyle = R.mining ? '#7fffd4' : '#2a5a6a';
+      polyPath([[11, y0 - 0.5], [12.6, y0 - 0.3], [12.6, y0 + 0.3], [11, y0 + 0.5]]); ctx.fill();
+    }
+    // drill head: dashes spin faster while mining
+    ctx.beginPath(); ctx.arc(14, 0, 2.6, 0, TAU);
+    ctx.fillStyle = R.mining ? '#1e6a64' : '#163a48'; ctx.fill();
+    ctx.setLineDash([3, 2.5]);
+    ctx.lineDashOffset = -R.time * (R.mining ? 60 : 8);
+    ctx.strokeStyle = R.mining ? '#b8fff4' : '#4a7a8a'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(14, 0, 2.6, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
 
   // ---- hit flash overlay ----
   if (fa > 0) {
