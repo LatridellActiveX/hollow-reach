@@ -19,32 +19,51 @@
 html,body{margin:0;height:100%;background:#05070d;color:#cfe8ff;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
 #c{position:fixed;inset:0;display:block;touch-action:none}
 #mini{position:fixed;right:10px;top:calc(env(safe-area-inset-top) + 8px);width:112px;height:112px;border-radius:50%;border:1px solid #1d3350;background:#05070dcc;pointer-events:none}
-#hud{position:fixed;top:0;left:0;width:62%;max-width:420px;padding:calc(env(safe-area-inset-top) + 8px) 12px 16px;background:linear-gradient(#05070ded,#05070d00);pointer-events:none}
+#hud{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:10px;width:252px;padding:10px;border-radius:14px;background:linear-gradient(135deg,rgba(9,20,36,.88),rgba(4,9,18,.8));border:1px solid rgba(62,166,255,.28);box-shadow:0 8px 24px #000a,inset 0 0 18px rgba(62,166,255,.07);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none;display:grid;grid-template-columns:84px 1fr;gap:10px;align-items:center}
+#hud::before,#hud::after{content:"";position:absolute;width:12px;height:12px;border-color:#7fe3ff;border-style:solid;opacity:.9}
+#hud::before{top:-1px;left:-1px;border-width:2px 0 0 2px;border-radius:14px 0 0 0}
+#hud::after{bottom:-1px;right:-1px;border-width:0 2px 2px 0;border-radius:0 0 14px 0}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-#sysname{font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9ee6ff;text-shadow:0 0 8px #3ea6ff66}
-#sec{margin-left:8px;font-weight:700}
-#credits{color:#ffd166;font-variant-numeric:tabular-nums;font-weight:700;text-shadow:0 0 8px #ffd16655}
-.bars{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
-.bar{height:9px;background:#0e1a2b;border:1px solid #1d3350;border-radius:5px;overflow:hidden}
-.bar i{display:block;height:100%;width:100%;transition:width .25s;box-shadow:0 0 8px currentColor}
-#bsh{background:#3ea6ff;color:#3ea6ff}#bhu{background:#e0524c;color:#e0524c}#bfu{background:#7fd17f;color:#7fd17f}
-.labels{display:grid;grid-template-columns:1fr 1fr 1fr;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7d97b5;margin-top:2px}
-#status{font-size:12px;color:#9fb6d0;margin-top:5px}
-#cargo{font-size:12px;color:#9fb6d0;margin-top:5px;white-space:nowrap}
-#menu{position:fixed;right:10px;top:calc(env(safe-area-inset-top) + 128px);display:flex;gap:6px}
-.sm{min-width:56px;padding:8px 10px;font-size:12px;border-radius:8px}
-#acts{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);display:grid;grid-template-columns:repeat(3,62px);gap:8px}
+.gauge{position:relative;width:84px;height:84px}
+.gauge svg{width:84px;height:84px;transform:rotate(-90deg);overflow:visible}
+.gauge circle{fill:none;stroke-linecap:round;transition:stroke-dasharray .3s}
+.gauge circle.trk{stroke:#0e1d31}
+.gc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.gc b{font-size:17px;color:#fff;text-shadow:0 0 8px #e0524c}
+.gc small{font-size:8px;letter-spacing:.14em;color:#7d97b5;text-transform:uppercase}
+.info{min-width:0}
+.sysrow{display:flex;align-items:center;gap:6px;min-width:0}
+#sysname{font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#9ee6ff;text-shadow:0 0 8px #3ea6ff66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sec{font-size:9px;font-weight:800;padding:2px 5px;border-radius:5px;border:1px solid;background:rgba(0,0,0,.35);white-space:nowrap;font-variant-numeric:tabular-nums}
+#credits{margin-top:2px;color:#ffd166;font-variant-numeric:tabular-nums;font-weight:800;font-size:17px;text-shadow:0 0 10px #ffd16655}
+#credits::after{content:" cr";font-size:10px;color:#a8875a;font-weight:700}
+#cargoBar{display:flex;gap:1px;height:6px;margin-top:6px;border-radius:3px;overflow:hidden;background:#0c1828;border:1px solid #17304d}
+#cargoBar i{display:block;height:100%}
+#cargoTxt{font-size:10px;color:#7d97b5;margin-top:3px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+#status{margin-top:5px;font-size:11px;color:#9fb6d0;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#status:empty{display:none}
+#status::before{content:"";width:6px;height:6px;border-radius:50%;background:#7fffd4;box-shadow:0 0 8px #7fffd4;flex:none;animation:blip 1.6s infinite}
+@keyframes blip{50%{opacity:.25}}
+#menu{position:fixed;right:10px;top:calc(env(safe-area-inset-top) + 128px);display:flex;gap:5px}
+.pill{padding:6px 9px;font:800 10px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;background:rgba(9,20,36,.85);border:1px solid rgba(62,166,255,.3);color:#9ee6ff;box-shadow:0 3px 10px #000a}
+#acts{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);display:grid;grid-template-columns:repeat(4,54px);gap:8px;padding:8px;border-radius:18px;background:rgba(4,9,18,.6);border:1px solid rgba(62,166,255,.2);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 8px 24px #000a}
 button{background:#0f2034e6;color:#cfe8ff;border:1px solid #2a4a6e;border-radius:12px;padding:10px 12px;font:700 13px system-ui;cursor:pointer;touch-action:manipulation}
 button:active{transform:scale(.96)}
 button:disabled{opacity:.35}
-.act{width:62px;height:62px;border-radius:50%;font-size:11px;letter-spacing:.05em;padding:0;line-height:1.1}
-.act small{display:block;font-size:10px;color:#7d97b5;font-weight:600}
-.act.on{background:#1d5a8f;border-color:#3ea6ff;box-shadow:0 0 14px #3ea6ff88}
-.act.fire.on{background:#7a2a2a;border-color:#ff6b6b;box-shadow:0 0 14px #ff6b6b88}
-.act.mine.on{background:#1b6b5f;border-color:#7fffd4;box-shadow:0 0 14px #7fffd488}
-.act.stop{border-color:#5a4a2a;color:#ffd9a0}
+.act{position:relative;width:54px;height:54px;border-radius:50%;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:radial-gradient(circle at 50% 25%,#1a3756,#0a1626 72%);border:1px solid #2a4a6e;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 4px 12px #000b;font:800 8px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;color:#9ee6ff}
+.act svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.act .cd{position:absolute;inset:-4px;border-radius:50%;pointer-events:none;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px))}
+.act b{position:absolute;top:-5px;right:-4px;min-width:17px;padding:1px 4px;border-radius:8px;background:#0a1626;border:1px solid #2a4a6e;color:#ffd166;font:800 9px/1.3 system-ui;text-align:center;letter-spacing:0}
+.act.on{color:#fff;border-color:#3ea6ff;box-shadow:0 0 16px #3ea6ff88,inset 0 0 12px #3ea6ff44}
+.act.fire{color:#ff9e9e}
+.act.fire.on{border-color:#ff6b6b;box-shadow:0 0 16px #ff6b6b99,inset 0 0 12px #ff6b6b44}
+.act.mine{color:#8effe0}
+.act.mine.on{border-color:#7fffd4;box-shadow:0 0 16px #7fffd499,inset 0 0 12px #7fffd444}
+.act.warp{color:#d3b8ff}
+.act.dock{color:#9ee6ff}
+.act.stop{color:#ffd9a0;border-color:#5a4a2a}
 .hide{display:none!important}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 218px);background:#0f2034ee;border:1px solid #2a4a6e;padding:7px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 4px 18px #000a}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 176px);background:#0f2034ee;border:1px solid #2a4a6e;padding:7px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 4px 18px #000a}
 #toast.show{opacity:1}
 #flash{position:fixed;inset:0;background:#dff3ff;opacity:0;pointer-events:none;transition:opacity .4s}
 #panel{position:fixed;inset:0;background:#05070ef7;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 12px)}
@@ -86,6 +105,25 @@ details.hist summary{cursor:pointer;color:#9ee6ff;font-size:13px}
 .pips{display:flex;gap:4px;margin-top:5px}
 .pips i{width:18px;height:6px;border-radius:3px;background:#14283f;border:1px solid #1d3350}
 .pips i.on{background:#3ea6ff;border-color:#3ea6ff;box-shadow:0 0 6px #3ea6ff}
+.cgo-hero{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px;border-radius:14px;background:linear-gradient(135deg,#0c1d33,#070e1b);border:1px solid #1d3350;margin-bottom:8px}
+.cgo-big{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:#e6f6ff}
+.cgo-big span{font-size:12px;color:#7d97b5;font-weight:700}
+.cgo-seg{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#0a1424;border:1px solid #1d3350;margin-top:8px;gap:1px}
+.cgo-seg i{display:block;height:100%}
+.cgo-ring{width:70px;height:70px}
+.cgo-row{display:grid;grid-template-columns:46px 1fr auto;gap:10px;align-items:center;padding:10px;margin:6px 0;border-radius:12px;background:#0a1626;border:1px solid #142a44}
+.cgo-chip{width:46px;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 0 14px rgba(0,0,0,.5),0 0 14px var(--glow);background:var(--grad)}
+.cgo-name{font-weight:800;letter-spacing:.04em}
+.cgo-meta{font-size:11px;color:#7d97b5;margin-top:2px;font-variant-numeric:tabular-nums}
+.cgo-bar{height:5px;border-radius:3px;background:#0c1828;margin-top:6px;overflow:hidden}
+.cgo-bar i{display:block;height:100%;background:var(--glow);box-shadow:0 0 6px var(--glow)}
+.cgo-btns{display:flex;flex-direction:column;gap:4px}
+.cgo-btns button{padding:6px 9px;font-size:11px;border-radius:8px}
+.cgo-items{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cgo-item{padding:10px 6px;border-radius:12px;background:#0a1626;border:1px solid #142a44;text-align:center}
+.cgo-item b{display:block;font-size:20px;font-variant-numeric:tabular-nums;color:#e6f6ff}
+.cgo-item small{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#7d97b5}
+.cgo-note{font-size:12px;color:#7d97b5;margin:8px 0}
 </style>
 </head>
 <body>
@@ -93,32 +131,42 @@ details.hist summary{cursor:pointer;color:#9ee6ff;font-size:13px}
 <canvas id="mini" width="256" height="256"></canvas>
 
 <div id="hud">
-  <div class="row"><div><span id="sysname"></span><span id="sec"></span></div><div id="credits"></div></div>
-  <div class="bars">
-    <div class="bar"><i id="bsh"></i></div>
-    <div class="bar"><i id="bhu"></i></div>
-    <div class="bar"><i id="bfu"></i></div>
+  <div class="gauge">
+    <svg viewBox="0 0 84 84">
+      <circle class="trk" cx="42" cy="42" r="38" stroke-width="4" pathLength="100"/>
+      <circle id="arcSh" cx="42" cy="42" r="38" stroke="#3ea6ff" stroke-width="4" pathLength="100" style="filter:drop-shadow(0 0 3px #3ea6ff)"/>
+      <circle class="trk" cx="42" cy="42" r="30" stroke-width="4" pathLength="100"/>
+      <circle id="arcHu" cx="42" cy="42" r="30" stroke="#e0524c" stroke-width="4" pathLength="100" style="filter:drop-shadow(0 0 3px #e0524c)"/>
+      <circle class="trk" cx="42" cy="42" r="22" stroke-width="4" pathLength="100"/>
+      <circle id="arcFu" cx="42" cy="42" r="22" stroke="#7fd17f" stroke-width="4" pathLength="100" style="filter:drop-shadow(0 0 3px #7fd17f)"/>
+    </svg>
+    <div class="gc"><b id="hullPct">100</b><small>hull</small></div>
   </div>
-  <div class="labels"><span>Shield</span><span>Hull</span><span>Fuel</span></div>
-  <div id="status"></div>
-  <div id="cargo"></div>
+  <div class="info">
+    <div class="sysrow"><span id="sysname"></span><span id="sec"></span></div>
+    <div id="credits"></div>
+    <div id="cargoBar"></div>
+    <div id="cargoTxt"></div>
+    <div id="status"></div>
+  </div>
 </div>
 
 <div id="menu">
-  <button id="bMap" class="sm">Map</button>
-  <button id="bSnd" class="sm">Sound on</button>
-  <button id="bUpd" class="sm">Updates</button>
-  <button id="bLog" class="sm">Log</button>
+  <button id="bMap" class="pill">Map</button>
+  <button id="bCargo" class="pill">Cargo</button>
+  <button id="bSnd" class="pill">Sound on</button>
+  <button id="bUpd" class="pill">Updates</button>
+  <button id="bLog" class="pill">Log</button>
 </div>
 
 <div id="acts">
-  <button id="bFire" class="act fire">FIRE</button>
-  <button id="bMiss" class="act">MISSILE<small>0</small></button>
-  <button id="bMine" class="act mine">MINE</button>
-  <button id="bDrone" class="act">DRONE<small>0</small></button>
-  <button id="bWarp" class="act">WARP</button>
-  <button id="bDock" class="act">DOCK</button>
-  <button id="bStop" class="act stop">STOP</button>
+  <button id="bFire" class="act fire"><i class="cd"></i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>Fire</button>
+  <button id="bMiss" class="act miss"><i class="cd"></i><svg viewBox="0 0 24 24"><path d="M12 2l3 7v8l-3 3-3-3V9z"/><path d="M9 14l-3 3M15 14l3 3"/></svg>Missile<b>0</b></button>
+  <button id="bMine" class="act mine"><i class="cd"></i><svg viewBox="0 0 24 24"><path d="M12 3l7 6-7 12-7-12z"/><path d="M5 9h14"/></svg>Mine</button>
+  <button id="bDrone" class="act drone"><i class="cd"></i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/></svg>Drone<b>0</b></button>
+  <button id="bWarp" class="act warp"><i class="cd"></i><svg viewBox="0 0 24 24"><path d="M3 12h11M10 7l5 5-5 5"/><circle cx="19" cy="12" r="2"/></svg>Warp</button>
+  <button id="bDock" class="act dock"><i class="cd"></i><svg viewBox="0 0 24 24"><path d="M3 18h18M6 18V10l6-4 6 4v8"/><path d="M10 18v-4h4v4"/></svg>Dock</button>
+  <button id="bStop" class="act stop"><i class="cd"></i><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Stop</button>
 </div>
 
 <div id="toast"></div>
@@ -153,7 +201,7 @@ const UPDATE_CHECK_MS = 5 * 60 * 1000;
 
 // ore types: rarer ores need more dangerous space
 const ORE = {
-  ferrum:    { name: 'Ferrum',    base: 10, hard: 1.00, crystal: false, sec: [0, 1],   w: 5,   col: ['#d9dde3', '#6f7785', '#2b303a'], vein: '200,210,225' },
+  ferrum:    { name: 'Ferrum',    base: 10, hard: 1.00, crystal: false, sec: [0, 1],   w: 5,   col: ['#f0a070', '#9a4a2a', '#3a1a10'], vein: '255,150,90' },
   veldite:   { name: 'Veldite',   base: 14, hard: 1.00, crystal: false, sec: [0, 1],   w: 3,   col: ['#ead3a6', '#7d6848', '#241d12'], vein: '255,190,90' },
   azurite:   { name: 'Azurite',   base: 32, hard: 0.80, crystal: true,  sec: [0.4, 1], w: 1.2, col: ['#bfe3ff', '#2f6fb0', '#0c2440'], vein: '120,190,255' },
   krysite:   { name: 'Krysite',   base: 42, hard: 0.70, crystal: true,  sec: [0, 0.7], w: 1,   col: ['#c4fff7', '#2f9a90', '#0a2e2b'], vein: '120,255,240' },
@@ -166,7 +214,7 @@ const UPG = [
   { k: 'mining', name: 'Mining Laser',       base: 500, desc: '+0.8 ore/s per level' },
   { k: 'shield', name: 'Shield Booster',     base: 500, desc: '+30 max shield per level' },
   { k: 'armor',  name: 'Armor Plating',      base: 500, desc: '+40 max hull per level' },
-  { k: 'cargo',  name: 'Cargo Hold',         base: 400, desc: '+25 cargo per level' },
+  { k: 'cargo',  name: 'Cargo Hold',         base: 400, desc: '+150 cargo per level' },
   { k: 'engine', name: 'Afterburner Engine', base: 400, desc: '+30 top speed per level' },
   { k: 'fuel',   name: 'Fuel Tank',          base: 300, desc: '+40 max fuel per level' },
 ];
@@ -301,6 +349,11 @@ function load() {
       s.cargo = Object.assign(f.cargo, d.s.cargo || {});
       s.items = Object.assign(f.items, d.s.items || {});
       if (!SYS[s.sysId]) s.sysId = 0;
+      // saved values can be corrupt (NaN is stored as null); reset anything that is not a finite number
+      for (const k of ORE_KEYS) if (!Number.isFinite(s.cargo[k])) s.cargo[k] = 0;
+      for (const k in s.items) if (!Number.isFinite(s.items[k])) s.items[k] = 0;
+      for (const k of ['credits', 'hull', 'shield', 'fuel', 'kills', 'deaths', 'mined']) if (!Number.isFinite(s[k])) s[k] = f[k];
+      for (const k in s.levels) if (!Number.isFinite(s.levels[k])) s.levels[k] = 0;
       return s;
     }
   } catch (e) {}
@@ -347,7 +400,7 @@ function st() {
     rate: 2.5 + 0.8 * L.mining,
     shMax: 60 + 30 * L.shield,
     hullMax: 100 + 40 * L.armor,
-    cargoMax: 50 + 25 * L.cargo,
+    cargoMax: 200 + 150 * L.cargo,
     speed: 220 + 30 * L.engine,
     fuelMax: 100 + 40 * L.fuel,
     cool: 0.7
@@ -2046,25 +2099,45 @@ function statusText() {
   return R.dest ? 'Moving' : 'Idle';
 }
 
+function setArc(id, frac) {
+  const v = clamp(frac, 0, 1) * 100;
+  $(id).style.strokeDasharray = v > 0.5 ? `${v.toFixed(2)} 100` : '0 100';
+}
+function setCd(id, frac) {
+  const cd = $(id).querySelector('.cd');
+  if (cd) cd.style.background = frac > 0.01
+    ? `conic-gradient(rgba(255,255,255,.75) ${(clamp(frac, 0, 1) * 360).toFixed(1)}deg, transparent 0)` : 'none';
+}
 function hud() {
   const s = st();
   const sys = SYS[P.sysId];
+  const sc = secColor(sys.sec);
   $('sysname').textContent = sys.name;
-  $('sec').textContent = sys.sec.toFixed(1);
-  $('sec').style.color = secColor(sys.sec);
-  $('credits').textContent = fmt(P.credits) + ' cr';
-  $('bsh').style.width = pct(P.shield, s.shMax);
-  $('bhu').style.width = pct(P.hull, s.hullMax);
-  $('bfu').style.width = pct(P.fuel, s.fuelMax);
-  $('cargo').textContent = `Cargo ${cargoUsed()}/${s.cargoMax}`;
+  $('sec').textContent = 'SEC ' + sys.sec.toFixed(1);
+  $('sec').style.color = sc;
+  $('sec').style.borderColor = sc;
+  $('credits').textContent = fmt(P.credits);
+  setArc('arcSh', P.shield / s.shMax);
+  setArc('arcHu', P.hull / s.hullMax);
+  setArc('arcFu', P.fuel / s.fuelMax);
+  $('hullPct').textContent = Math.round(clamp(P.hull / s.hullMax, 0, 1) * 100);
+  $('cargoBar').innerHTML = ORE_KEYS.filter(k => P.cargo[k] > 0)
+    .map(k => `<i style="width:${(P.cargo[k] / s.cargoMax * 100).toFixed(2)}%;background:rgb(${ORE[k].vein})"></i>`).join('');
+  $('cargoTxt').textContent = `Hold ${fmt(cargoUsed())} / ${fmt(s.cargoMax)}`;
   $('status').textContent = R.panel ? '' : statusText();
   $('bFire').classList.toggle('on', R.autoFire);
   $('bMine').classList.toggle('on', R.autoMine);
-  $('bMiss').querySelector('small').textContent = P.items.missile;
-  $('bDrone').querySelector('small').textContent = world.drones.length + '/' + (P.items.cdrone + P.items.mdrone);
-  $('bWarp').classList.toggle('on', R.route != null || (R.target && R.target.kind === 'gate'));
-  $('bDock').classList.toggle('on', R.target && R.target.kind === 'station');
+  $('bMiss').querySelector('b').textContent = P.items.missile;
+  $('bDrone').querySelector('b').textContent = P.items.mdrone + P.items.cdrone;
+  setCd('bFire', R.fireCool / s.cool);
+  setCd('bMiss', R.missCool);
+  $('bWarp').classList.toggle('on', R.route != null || !!(R.target && R.target.kind === 'gate'));
+  $('bDock').classList.toggle('on', !!(R.target && R.target.kind === 'station'));
   $('bStop').classList.toggle('hide', !(R.target || R.dest || R.route != null || R.autoFire || R.autoMine));
+  if (R.panel === 'cargo') {
+    const sig = cargoSig();
+    if (sig !== R.cgoSig) { R.cgoSig = sig; $('pbody').innerHTML = cargoHTML(); }
+  }
 }
 
 // ============ panels ============
@@ -2223,15 +2296,72 @@ function refreshStation() {
   if (R.panel === 'station') $('pbody').innerHTML = stationHTML();
 }
 
-function sell(k) {
-  const n = P.cargo[k];
-  if (!n) return;
-  const gain = n * unitPrice(k);
+function nearStation() { return Math.hypot(ship.x, ship.y) < 150; }
+
+function sellN(k, n) {
+  if (!nearStation()) { SND.error(); log('Fly close to a station to sell.'); return; }
+  const have = P.cargo[k] || 0;
+  const q = Math.min(have, n);
+  if (!(q > 0)) return;
+  const gain = Math.round(q * unitPrice(k));
+  if (!Number.isFinite(gain)) { SND.error(); log('Sale failed: bad price data.'); return; }
+  P.cargo[k] = have - q;
   P.credits += gain;
-  P.cargo[k] = 0;
   R.fullWarn = false;
   SND.coin();
-  log(`Sold ${n} ${ORE[k].name} for ${fmt(gain)} cr.`);
+  log(`Sold ${q} ${ORE[k].name} for ${fmt(gain)} cr.`);
+}
+function sell(k) { sellN(k, Infinity); }
+
+const cargoSig = () => JSON.stringify([P.cargo, P.credits, P.items, world.drones.length, nearStation(), P.sysId, st().cargoMax]);
+
+function cargoHTML() {
+  const s = st(), max = s.cargoMax, used = cargoUsed();
+  const near = nearStation();
+  const frac = clamp(used / max, 0, 1);
+  const value = ORE_KEYS.reduce((a, k) => a + (P.cargo[k] || 0) * unitPrice(k), 0);
+  const seg = ORE_KEYS.filter(k => P.cargo[k] > 0)
+    .map(k => `<i style="width:${(P.cargo[k] / max * 100).toFixed(3)}%;background:rgb(${ORE[k].vein})"></i>`).join('');
+  const rows = ORE_KEYS.map(k => {
+    const n = P.cargo[k] || 0, O = ORE[k], [hi, mid, lo] = O.col;
+    const glow = `rgb(${O.vein})`;
+    const grad = `linear-gradient(135deg,${hi},${mid} 55%,${lo})`;
+    const price = unitPrice(k);
+    const can = near && n > 0;
+    return `<div class="cgo-row">
+      <div class="cgo-chip" style="--grad:${grad};--glow:${glow}"></div>
+      <div style="min-width:0">
+        <div class="cgo-name" style="color:${glow}">${O.name}</div>
+        <div class="cgo-meta">${fmt(n)} units · ${price} cr each · ${fmt(n * price)} cr</div>
+        <div class="cgo-bar" style="--glow:${glow}"><i style="width:${(n / max * 100).toFixed(3)}%"></i></div>
+      </div>
+      <div class="cgo-btns">
+        <button data-act="sell10" data-k="${k}" ${can ? '' : 'disabled'}>Sell 10</button>
+        <button data-act="sell" data-k="${k}" ${can ? '' : 'disabled'}>Sell all</button>
+      </div>
+    </div>`;
+  }).join('');
+  const items = [['Missiles', P.items.missile], ['Mining drones', P.items.mdrone], ['Combat drones', P.items.cdrone]]
+    .map(([label, n]) => `<div class="cgo-item"><b>${fmt(n)}</b><small>${label}</small></div>`).join('');
+  const ring = `<svg class="cgo-ring" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="27" fill="none" stroke="#0e1d31" stroke-width="6"/>
+      <circle cx="32" cy="32" r="27" fill="none" stroke="${frac > 0.9 ? '#ff6b6b' : '#7fffd4'}" stroke-width="6" pathLength="100"
+        stroke-linecap="round" stroke-dasharray="${(frac * 100).toFixed(2)} 100" transform="rotate(-90 32 32)"/>
+      <text x="32" y="37" text-anchor="middle" fill="#e6f6ff" font-size="13" font-weight="800">${Math.round(frac * 100)}%</text>
+    </svg>`;
+  return `
+    <div class="cgo-hero">
+      <div>
+        <div class="cgo-big">${fmt(used)}<span> / ${fmt(max)} units</span></div>
+        <div class="cgo-meta">Ore on hand is worth ${fmt(value)} cr</div>
+        <div class="cgo-seg">${seg}</div>
+      </div>
+      ${ring}
+    </div>
+    <div class="sec"><h3>Ore</h3>${rows}</div>
+    <div class="sec"><h3>Items</h3><div class="cgo-items">${items}</div></div>
+    <div class="cgo-note">${near ? 'In station range. Sales are live.' : 'Fly within range of a station to sell.'}</div>
+    ${near && used > 0 ? '<button class="wide good" data-act="sellhold">Sell all ore</button>' : ''}`;
 }
 
 function buy(k) {
@@ -2295,6 +2425,8 @@ $('pbody').addEventListener('click', e => {
   if (!b || b.disabled) return;
   const a = b.dataset.act;
   if (a === 'sell') sell(b.dataset.k);
+  else if (a === 'sell10') sellN(b.dataset.k, 10);
+  else if (a === 'sellhold') ORE_KEYS.forEach(k => sell(k));
   else if (a === 'buy') buy(b.dataset.k);
   else if (a === 'mfg') manufacture(b.dataset.k);
   else if (a === 'repair') repair();
@@ -2563,6 +2695,11 @@ $('bLog').addEventListener('click', () => {
      <button class="wide danger" data-act="reset">Reset universe</button>`);
 });
 $('bFire').addEventListener('pointerdown', e => e.stopPropagation());
+$('bCargo').addEventListener('click', () => {
+  openPanel('cargo', 'Cargo Hold', '');
+  $('pbody').innerHTML = cargoHTML();
+  R.cgoSig = cargoSig();
+});
 
 document.addEventListener('click', e => {
   if (e.target.closest('[data-act="closemap"]')) closePanel();
