@@ -1,11 +1,15 @@
 {
   "channels": {
     "stable": {
-      "version": "1.5.0",
-      "build": 6,
+      "version": "1.6.0",
+      "build": 7,
       "date": "2026-10-21",
       "url": "./",
       "notes": [
+        "Factory with stock counts, ingredient progress bars, how much more you need, and ×1, ×5 and Max builds",
+        "Refined alloy, crystal lenses and hollow cores: craft them and sell them at stations",
+        "Mining laser voiced per ore, with metallic chip pings, electric crackle and a shatter on break-up",
+        "More detailed ship hull: sheen, panel seams, rivets, vents, chase lights, cockpit frame and pilot, nozzle rings",
         "Studio-style flight audio: layered engine roar, air rush, reverb and an afterburn whoosh",
         "Ship modules: buy shields, nanites, overdrive, salvage magnets and more with icons, 4 slots",
         "Compact glass HUD with shield, hull and fuel gauges and an icon action bar",
@@ -21,6 +25,18 @@
         "Update check runs every 5 minutes"
       ],
       "history": [
+        {
+          "version": "1.5.0",
+          "build": 6,
+          "date": "2026-10-21",
+          "notes": [
+            "Studio-style flight audio: layered engine roar, air rush, reverb and an afterburn whoosh",
+            "Ship modules: buy shields, nanites, overdrive, salvage magnets and more with icons, 4 slots",
+            "Compact glass HUD with shield, hull and fuel gauges and an icon action bar",
+            "Cargo Hold screen with per-ore sales and a hold that holds up to 950 units",
+            "Fixed corrupt save values that could cause NaN in sales; ferrum rocks are now rust-orange and easier to see"
+          ]
+        },
         {
           "version": "1.4.0",
           "build": 5,

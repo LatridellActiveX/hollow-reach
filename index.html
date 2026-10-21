@@ -132,6 +132,27 @@ details.hist summary{cursor:pointer;color:#9ee6ff;font-size:13px}
 .mod-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--c);background:radial-gradient(circle,rgba(255,255,255,.06),transparent 70%);box-shadow:0 0 10px -2px var(--c)}
 .mod.on .mod-ico{box-shadow:0 0 16px var(--c)}
 .mod.on b::after{content:" · installed";font-size:9px;letter-spacing:.1em;color:#7fffd4;text-transform:uppercase}
+.fstocks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 8px}
+.fstock{padding:8px 4px;border-radius:10px;background:#0a1626;border:1px solid #142a44;text-align:center}
+.fstock b{display:block;font-size:17px;font-variant-numeric:tabular-nums;color:#e6f6ff}
+.fstock small{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#7d97b5}
+.fcard{padding:12px;margin:8px 0;border-radius:14px;background:linear-gradient(135deg,#0b1a2e,#070e1b);border:1px solid #1d3350}
+.fcard.ready{border-color:#2f6b5a;box-shadow:0 0 16px -6px #7fffd4}
+.fhead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.fstat{font-size:9px;font-weight:800;letter-spacing:.12em;padding:3px 7px;border-radius:6px;border:1px solid #3a4a5e;color:#7d97b5;white-space:nowrap}
+.fstat.go{color:#7fffd4;border-color:#7fffd4;background:#7fffd41a}
+.fout{font-size:12px;color:#ffd166;margin:8px 0 4px;font-weight:700}
+.fings{display:grid;gap:6px;margin:6px 0}
+.ing{display:grid;grid-template-columns:12px 84px 1fr 118px;gap:8px;align-items:center;font-size:12px}
+.ichip{width:12px;height:12px;border-radius:4px;background:var(--c);box-shadow:0 0 8px var(--c)}
+.ibar{height:6px;border-radius:3px;background:#0c1828;overflow:hidden;border:1px solid #17304d}
+.ibar i{display:block;height:100%}
+.inum{text-align:right;font-variant-numeric:tabular-nums;color:#ff9e8a;font-size:11px;white-space:nowrap}
+.inum.ok{color:#7fffd4}
+.fcost{font-size:11px;color:#7d97b5;margin-top:6px}
+.fcost.bad{color:#ff9e8a}
+.fbtns{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:6px;margin-top:10px}
+.fbtns button{padding:8px 4px;font-size:11px}
 </style>
 </head>
 <body>
@@ -203,7 +224,7 @@ const SAVE_KEY = 'hollowReach.v2';
 const SHIP_S = 1.8;          // ship draw scale
 const DRONE_MAX = 4;
 // bump version/build (and version.json) on every release
-const APP = { version: '1.5.0', build: 6, date: '2026-10-21' };
+const APP = { version: '1.6.0', build: 7, date: '2026-10-21' };
 const UPDATE_URL = 'version.json';
 const UPDATE_CHECK_MS = 5 * 60 * 1000;
 
@@ -232,7 +253,17 @@ const RECIPES = [
   { k: 'missile', name: 'Missile x3',   need: { ferrum: 4, azurite: 1 }, cost: 150, out: { missile: 3 },  desc: 'Homing warhead. Launch with the MISSILE button.' },
   { k: 'mdrone',  name: 'Mining drone', need: { ferrum: 2, veldite: 6 }, cost: 200, out: { mdrone: 1 },   desc: 'Mines nearby rocks into your hold at half your rate.' },
   { k: 'cdrone',  name: 'Combat drone', need: { ferrum: 4, krysite: 3 }, cost: 260, out: { cdrone: 1 },   desc: 'Hunts pirates near your ship with a pulse laser.' },
+  { k: 'alloy',   name: 'Refined alloy', need: { ferrum: 8, veldite: 3 }, cost: 80,  out: { alloy: 4 },   desc: 'Dense plate stock. Sells at any station.' },
+  { k: 'lens',    name: 'Crystal lens',  need: { krysite: 4, azurite: 2 }, cost: 220, out: { lens: 1 },    desc: 'Precision optic. Good resale value.' },
+  { k: 'core',    name: 'Hollow core',   need: { hollowite: 2, krysite: 2 }, cost: 500, out: { core: 1 },   desc: 'Rare power core. Top resale value.' },
 ];
+// refined goods: made in the factory, carried in the hold, sold at stations
+const GOODS = {
+  alloy: { name: 'Refined alloy', base: 70,  c: '#b8c4d6' },
+  lens:  { name: 'Crystal lens',  base: 170, c: '#9ee6ff' },
+  core:  { name: 'Hollow core',   base: 320, c: '#ff9bf0' },
+};
+const OUT_NAMES = { missile: 'Missiles', mdrone: 'Mining drones', cdrone: 'Combat drones', alloy: 'Refined alloy', lens: 'Crystal lens', core: 'Hollow core' };
 const ITEM_NAMES = { missile: 'Missiles', mdrone: 'Mining drones', cdrone: 'Combat drones' };
 
 // ship modules: buy with credits, install into one of the slots, each with an icon
@@ -356,7 +387,7 @@ function freshState() {
     levels: { cannon: 0, mining: 0, shield: 0, armor: 0, cargo: 0, engine: 0, fuel: 0 },
     hull: 100, shield: 60, fuel: 100,
     cargo: freshCargo(),
-    items: { missile: 0, mdrone: 0, cdrone: 0 },
+    items: { missile: 0, mdrone: 0, cdrone: 0, alloy: 0, lens: 0, core: 0 },
     mods: [],
     sysId: 0, kills: 0, deaths: 0, mined: 0
   };
@@ -434,10 +465,20 @@ function st() {
     priceMul: has('refinery') ? 1.15 : 1
   };
 }
-const cargoUsed = () => ORE_KEYS.reduce((a, k) => a + (P.cargo[k] || 0), 0);
+const cargoUsed = () => ORE_KEYS.reduce((a, k) => a + (P.cargo[k] || 0), 0)
+  + Object.keys(GOODS).reduce((a, k) => a + (P.items[k] || 0), 0);
 const secOf = () => SYS[P.sysId].sec;
 const unitPrice = k => Math.round(ORE[k].base * (1 + (1 - secOf()) * 0.6) * st().priceMul);
-const canMake = r => P.credits >= r.cost && Object.keys(r.need).every(k => P.cargo[k] >= r.need[k]);
+// how many batches of a recipe you can build right now (ore, credits and hold space)
+function maxMake(r) {
+  let m = Math.floor(P.credits / r.cost);
+  for (const k in r.need) m = Math.min(m, Math.floor((P.cargo[k] || 0) / r.need[k]));
+  const goodsOut = Object.keys(r.out).filter(k => GOODS[k]).reduce((a, k) => a + r.out[k], 0);
+  const ingIn = Object.values(r.need).reduce((a, b) => a + b, 0);
+  if (goodsOut - ingIn > 0) m = Math.min(m, Math.floor((st().cargoMax - cargoUsed()) / (goodsOut - ingIn)));
+  return Math.max(0, m);
+}
+const canMake = r => maxMake(r) >= 1;
 
 // ============ canvas ============
 const canvas = $('c');
@@ -482,6 +523,9 @@ function nebula(sysId) {
 }
 
 // ============ sound (synthesized with Web Audio; no audio files) ============
+// mining-laser voicing: body pitch per ore, and the metallic ping each chip makes
+const MINE_HZ = { ferrum: 150, veldite: 170, azurite: 200, krysite: 230, hollowite: 260 };
+const MINE_PING = { ferrum: 620, veldite: 780, azurite: 980, krysite: 1240, hollowite: 1500 };
 const SND = {
   on: (() => { try { return localStorage.getItem('hollowReach.sound') !== 'off'; } catch (e) { return true; } })(),
   ac: null, master: null, noise: null, eng: null, engG: null, engF: null, mineNodes: null, mineOn: false,
@@ -575,29 +619,76 @@ const SND = {
   boom()      { this.noiseBurst(0.9, { freq: 600, vol: 0.55 }); this.tone(90, 0.6, { type: 'sine', vol: 0.4, slide: 25 }); this.noiseBurst(0.3, { freq: 3000, type: 'highpass', vol: 0.15, delay: 0.02 }); },
   death()     { this.noiseBurst(1.4, { freq: 400, vol: 0.55 }); this.tone(400, 1.2, { type: 'sawtooth', vol: 0.18, slide: 40 }); },
   // mining: a bright zap per chip, plus a looping humming beam while the laser is on
-  mine()      { this.tone(2400, 0.07, { type: 'sine', vol: 0.05, slide: 1100 }); this.noiseBurst(0.04, { freq: 4000, type: 'highpass', vol: 0.05 }); },
-  mineSet(on) {
-    if (on === this.mineOn || !this.ok()) return;
-    this.mineOn = on;
-    const ac = this.ac, t = ac.currentTime;
+  // one chip ejecting: a bright metallic ping with a short bite of noise, tuned per ore
+  mine(ore) {
+    if (!this.ok()) return;
+    const t = this.ac.currentTime, f = (MINE_PING[ore] || 900) * rnd(0.98, 1.02);
+    const o = this.ac.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(f * 1.35, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+    const g = this.ac.createGain();
+    g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g); this.out(g, 0.45); o.start(t); o.stop(t + 0.14);
+    this.noiseBurst(0.015, { type: 'highpass', freq: 5000, vol: 0.05, wet: 0.2 });
+  },
+  // rock breaking apart: a noise crash plus a detuned bell cluster
+  shatter(ore) {
+    if (!this.ok()) return;
+    this.noiseBurst(0.35, { type: 'highpass', freq: 2500, vol: 0.4, wet: 0.5 });
+    [0, 0.04, 0.09].forEach((d, i) => this.tone((MINE_PING[ore] || 900) * (1.5 + i * 0.25), 0.5, { type: 'sine', vol: 0.06, delay: d, wet: 0.6 }));
+  },
+  // retune the running beam when you switch to a different ore
+  retune(ore) {
+    const m = this.mineNodes, t = this.ac.currentTime, base = MINE_HZ[ore] || 150;
+    m.saw.frequency.setTargetAtTime(base, t, 0.15);
+    m.saw2.frequency.setTargetAtTime(base * 1.006, t, 0.15);
+    m.bp.frequency.setTargetAtTime(base * 5, t, 0.15);
+    m.sh.frequency.setTargetAtTime(base * 4, t, 0.15);
+    m.vibG.gain.setTargetAtTime(base * 0.02, t, 0.15);
+    this.mineOre = ore;
+  },
+  // sparse electric crackle layered over the beam
+  crackle() {
+    if (!this.ok() || !this.mineNodes) return;
+    if (Math.random() < 0.6) this.noiseBurst(0.012 + Math.random() * 0.02, { type: 'highpass', freq: 3500 + Math.random() * 3000, vol: 0.05 + Math.random() * 0.08, wet: 0.3 });
+  },
+  // the continuous mining beam: a band-passed saw body, a vibrato shimmer, hot air hiss and crackle
+  mineSet(on, ore) {
+    if (!this.ac) return;
+    const t = this.ac.currentTime;
+    if (on && this.mineNodes) { if (ore && ore !== this.mineOre) this.retune(ore); return; }
     if (on) {
-      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 180;
-      const lfo = ac.createOscillator(); lfo.frequency.value = 9;
-      const lg = ac.createGain(); lg.gain.value = 40;
-      lfo.connect(lg); lg.connect(o.frequency);
-      const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 3;
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.15);
-      o.connect(f); f.connect(g); g.connect(this.master);
-      o.start(); lfo.start();
-      this.mineNodes = { o, lfo, g };
+      if (!this.ok()) return;
+      const ac = this.ac, base = MINE_HZ[ore] || 150;
+      const bus = ac.createGain(); bus.gain.value = 0;
+      bus.gain.setTargetAtTime(0.9, t, 0.05);
+      const saw = ac.createOscillator(); saw.type = 'sawtooth'; saw.frequency.value = base;
+      const saw2 = ac.createOscillator(); saw2.type = 'sawtooth'; saw2.frequency.value = base * 1.006;
+      const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = base * 5; bp.Q.value = 4;
+      const sawG = ac.createGain(); sawG.gain.value = 0.07;
+      saw.connect(bp); saw2.connect(bp); bp.connect(sawG); sawG.connect(bus);
+      const sh = ac.createOscillator(); sh.type = 'sine'; sh.frequency.value = base * 4;
+      const vib = ac.createOscillator(); vib.type = 'sine'; vib.frequency.value = 6.2;
+      const vibG = ac.createGain(); vibG.gain.value = base * 0.02;
+      vib.connect(vibG); vibG.connect(sh.frequency);
+      const shG = ac.createGain(); shG.gain.value = 0.03;
+      sh.connect(shG); shG.connect(bus);
+      const ns = ac.createBufferSource(); ns.buffer = this.noise; ns.loop = true;
+      const nf = ac.createBiquadFilter(); nf.type = 'highpass'; nf.frequency.value = 2500;
+      const nG = ac.createGain(); nG.gain.value = 0.025;
+      ns.connect(nf); nf.connect(nG); nG.connect(bus);
+      this.out(bus, 0.35);
+      const srcs = [saw, saw2, sh, vib, ns];
+      srcs.forEach(n => n.start(t));
+      this.mineNodes = { bus, saw, saw2, bp, sh, vib, vibG, srcs };
+      this.mineOre = ore;
+      this.crackleT = setInterval(() => this.crackle(), 55);
     } else if (this.mineNodes) {
-      const { o, lfo, g } = this.mineNodes;
-      g.gain.cancelScheduledValues(t);
-      g.gain.setValueAtTime(g.gain.value, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-      o.stop(t + 0.15); lfo.stop(t + 0.15);
-      this.mineNodes = null;
+      const m = this.mineNodes;
+      m.bus.gain.cancelScheduledValues(t);
+      m.bus.gain.setTargetAtTime(0, t, 0.04);
+      m.srcs.forEach(n => n.stop(t + 0.35));
+      clearInterval(this.crackleT);
+      this.mineNodes = null; this.mineOre = null;
     }
   },
   chime()     { [660, 880, 1320].forEach((f, i) => this.tone(f, 0.25, { type: 'triangle', vol: 0.16, delay: i * 0.07 })); },
@@ -798,7 +889,7 @@ function mine(a, dt) {
   if (R.chipT > 0.12) {
     R.chipT = 0;
     const dx = ship.x - a.x, dy = ship.y - a.y, d = Math.hypot(dx, dy) || 1;
-    SND.mine();
+    SND.mine(a.ot);
     part(a.x + rnd(-a.r, a.r) * 0.5, a.y + rnd(-a.r, a.r) * 0.5, dx / d * 140, dy / d * 140, 0.5, `rgb(${ORE[a.ot].vein})`, 2.2);
   }
   if (a.ore <= 0) {
@@ -806,7 +897,7 @@ function mine(a, dt) {
     burst(a.x, a.y, `rgb(${ORE[a.ot].vein})`, 14, 160, 0.6);
     R.mining = false;
     if (R.target && R.target.kind === 'ast') R.target = null;
-    SND.chime();
+    SND.shatter(a.ot);
     log(`${ORE[a.ot].name} rock depleted.`);
   }
 }
@@ -1224,7 +1315,7 @@ function step(dt) {
   SND.engine(thr);
   if (thr > 0.9 && !R.boosting) { R.boosting = true; SND.whoosh(); }
   else if (thr < 0.7) R.boosting = false;
-  SND.mineSet(R.mining);
+  SND.mineSet(R.mining, R.mining && R.mineRef ? R.mineRef.ot : null);
   world.beams.forEach(b => b.life -= dt);
   world.beams = world.beams.filter(b => b.life > 0);
   world.rings.forEach(r => r.life -= dt);
@@ -1829,6 +1920,71 @@ function drawTexts() {
   ctx.globalAlpha = 1;
 }
 
+// extra surface detail drawn over the hull (ship-local units): sheen, panel seams, rivets,
+// vents, chase lights, cockpit frame and pilot, wing ribs, nozzle rings, antenna and markings
+function shipDetailPass(t, boost) {
+  const hull = [[20, 0], [13, -4], [6, -8], [-4, -9.5], [-12, -8.5], [-15, -4.5], [-15, 4.5], [-12, 8.5], [-4, 9.5], [6, 8], [13, 4]];
+  ctx.save();
+  polyPath(hull); ctx.clip();
+  const sx = ((t * 16) % 60) - 30;
+  const sg = ctx.createLinearGradient(sx - 8, -10, sx + 8, 10);
+  sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(220,245,255,0.22)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sg; ctx.fillRect(-20, -12, 40, 24);
+  ctx.strokeStyle = 'rgba(8,24,40,0.55)'; ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  for (let x = -12; x <= 14; x += 3) { ctx.moveTo(x, -8.5); ctx.lineTo(x, -6); ctx.moveTo(x, 6); ctx.lineTo(x, 8.5); }
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(190,220,240,0.55)';
+  for (let x = -12; x <= 14; x += 3) for (const y of [-7.2, 7.2]) { ctx.beginPath(); ctx.arc(x, y, 0.28, 0, TAU); ctx.fill(); }
+  for (let i = 0; i < 5; i++) {
+    const x = -9 + i * 3.2, on = Math.sin(t * 3 + i * 0.9) > 0.3;
+    ctx.fillStyle = on ? 'rgba(127,230,255,0.85)' : 'rgba(10,30,50,0.9)';
+    ctx.fillRect(x, -1.1, 1.6, 0.5); ctx.fillRect(x, 0.6, 1.6, 0.5);
+  }
+  const lx = -12 + ((t * 22) % 28);
+  const lg = ctx.createRadialGradient(lx, 0, 0, lx, 0, 3);
+  lg.addColorStop(0, 'rgba(158,230,255,0.9)'); lg.addColorStop(1, 'rgba(158,230,255,0)');
+  ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, 0, 3, 0, TAU); ctx.fill();
+  ctx.restore();
+
+  ctx.strokeStyle = 'rgba(220,245,255,0.45)'; ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(19, -0.3); ctx.lineTo(13, -4); ctx.lineTo(6, -7.8); ctx.lineTo(-4, -9.3); ctx.stroke();
+  ctx.strokeStyle = 'rgba(5,15,28,0.6)'; ctx.lineWidth = 0.4;
+  ctx.beginPath(); ctx.moveTo(-14, -3); ctx.lineTo(4, -3); ctx.moveTo(-14, 3); ctx.lineTo(4, 3); ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(8,20,34,0.9)'; ctx.lineWidth = 0.45;
+  ctx.beginPath();
+  ctx.moveTo(8, -3.2); ctx.lineTo(8, 3.2); ctx.moveTo(2, -3.8); ctx.lineTo(2, 3.8); ctx.moveTo(-3, -2.7); ctx.lineTo(-3, 2.7);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(12,30,48,0.7)';
+  ctx.beginPath(); ctx.ellipse(4, 0, 2.4, 1.2, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = `rgba(127,230,255,${0.3 + 0.2 * Math.sin(t * 4)})`; ctx.fillRect(-2.5, -0.5, 1.5, 1);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 0.35;
+  ctx.beginPath(); ctx.moveTo(11, -2.4); ctx.lineTo(4, -2.6); ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(8,22,38,0.7)'; ctx.lineWidth = 0.3;
+  ctx.beginPath();
+  for (const k of [-1, 1]) for (let i = 0; i < 5; i++) { const x = -i * 2.6; ctx.moveTo(x, -9.5 * k); ctx.lineTo(x - 0.8, -13.8 * k); }
+  ctx.stroke();
+  for (const k of [-1, 1]) {
+    if (Math.sin(t * 9 + k) > 0.6) { ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(-4.5, -14.5 * k, 0.8, 0, TAU); ctx.fill(); }
+  }
+  for (const k of [-1, 1]) {
+    const ey = 10.75 * k;
+    ctx.strokeStyle = 'rgba(255,170,90,0.5)'; ctx.lineWidth = 0.4;
+    ctx.beginPath(); ctx.ellipse(-21.6, ey, 1.7, 2.9, 0, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,220,160,${0.3 + 0.5 * boost})`; ctx.lineWidth = 0.35;
+    ctx.beginPath(); ctx.ellipse(-21.6, ey, 0.8, 1.6, 0, 0, TAU); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(200,225,240,0.8)'; ctx.lineWidth = 0.35;
+  ctx.beginPath(); ctx.moveTo(3, -7); ctx.lineTo(4.5, -10.5); ctx.stroke();
+  ctx.fillStyle = Math.sin(t * 5) > 0 ? '#ff5b5b' : '#5a2a2a';
+  ctx.beginPath(); ctx.arc(4.5, -10.5, 0.45, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(10,30,50,0.85)'; ctx.font = '2.2px system-ui'; ctx.textAlign = 'left';
+  ctx.fillText('HR-07', 1.5, 4.9);
+  ctx.fillStyle = '#ffb347'; ctx.fillRect(16.5, -0.6, 2.2, 0.4); ctx.fillRect(16.5, 0.2, 2.2, 0.4);
+}
+
 // the player ship: hull, wings with weapon turrets and missile racks, mining turret
 function drawShip() {
   const t = R.time, s = st();
@@ -2038,6 +2194,8 @@ function drawShip() {
     ctx.setLineDash([]);
     ctx.restore();
   }
+
+  shipDetailPass(t, boost);
 
   // hit flash overlay
   if (fa > 0) {
@@ -2315,12 +2473,7 @@ function stationHTML() {
       <div><b>${u.name}</b><div class="dim">${u.desc}</div><div class="pips">${pips(lvl)}</div></div>
       <button data-act="buy" data-k="${u.k}" ${max || P.credits < cost ? 'disabled' : ''}>${max ? 'MAX' : fmt(cost) + ' cr'}</button></div>`;
   }).join('');
-  const recipes = RECIPES.map(r => {
-    const need = Object.entries(r.need).map(([k, v]) => `${v} ${ORE[k].name}`).join(', ');
-    return `<div class="up">
-      <div><b>${r.name}</b><div class="dim">Uses ${need} + ${fmt(r.cost)} cr</div><div class="dim">${r.desc}</div></div>
-      <button data-act="mfg" data-k="${r.k}" ${canMake(r) ? '' : 'disabled'}>Build</button></div>`;
-  }).join('');
+  const recipes = factoryHTML();
   const rCost = Math.ceil((s.hullMax - P.hull) * 3);
   const fCost = Math.ceil((s.fuelMax - P.fuel) * 1.5);
   return `
@@ -2351,7 +2504,7 @@ function stationHTML() {
         ${stat('Ore mined', fmt(P.mined))}
       </div>
     </div>
-    <div class="sec"><h3>Market</h3>${ores}</div>
+    <div class="sec"><h3>Market</h3>${ores}${goodsHTML()}</div>
     <div class="sec"><h3>Factory</h3>${recipes}</div>
     <div class="sec"><h3>Services</h3>
       <div class="item"><div><b>Repair</b><div class="dim">Hull and shield to full</div></div>
@@ -2496,15 +2649,75 @@ function buy(k) {
   log(`Installed ${u.name} Lv ${P.levels[k]}.`);
 }
 
-function manufacture(key) {
+// want: batches to build (Infinity for max)
+function buildRecipe(key, want) {
   const r = RECIPES.find(x => x.k === key);
   if (!r) return;
-  if (!canMake(r)) { SND.error(); log('Missing ore or credits.'); return; }
-  for (const k in r.need) P.cargo[k] -= r.need[k];
-  P.credits -= r.cost;
-  for (const k in r.out) P.items[k] = (P.items[k] || 0) + r.out[k];
+  const n = Math.min(want, maxMake(r));
+  if (!(n >= 1)) { SND.error(); log('Missing ore, credits or hold space.'); return; }
+  for (const k in r.need) P.cargo[k] -= r.need[k] * n;
+  P.credits -= r.cost * n;
+  for (const k in r.out) P.items[k] = (P.items[k] || 0) + r.out[k] * n;
   SND.mfg();
-  log(`Manufactured ${r.name}.`);
+  log(`Built ${n} batch${n > 1 ? 'es' : ''} of ${r.name.replace(/ x\d+$/, '')}.`);
+}
+
+function factoryHTML() {
+  const stock = ['missile', 'mdrone', 'cdrone', 'alloy', 'lens', 'core']
+    .map(k => `<div class="fstock"><b>${fmt(P.items[k] || 0)}</b><small>${OUT_NAMES[k]}</small></div>`).join('');
+  const cards = RECIPES.map(r => {
+    const can = maxMake(r);
+    const outs = Object.entries(r.out).map(([k, v]) => `${v} × ${OUT_NAMES[k]}`).join(' · ');
+    const ings = Object.entries(r.need).map(([k, v]) => {
+      const have = P.cargo[k] || 0, ok = have >= v, col = `rgb(${ORE[k].vein})`;
+      return `<div class="ing">
+        <span class="ichip" style="--c:${col}"></span>
+        <span class="iname">${ORE[k].name}</span>
+        <span class="ibar"><i style="width:${(clamp(have / v, 0, 1) * 100).toFixed(1)}%;background:${col}"></i></span>
+        <span class="inum ${ok ? 'ok' : ''}">${fmt(have)}/${v}${ok ? '' : ' · need ' + fmt(v - have)}</span>
+      </div>`;
+    }).join('');
+    const credOk = P.credits >= r.cost;
+    return `<div class="fcard ${can > 0 ? 'ready' : ''}">
+      <div class="fhead">
+        <div><b>${r.name}</b><div class="dim">${r.desc}</div></div>
+        <span class="fstat ${can > 0 ? 'go' : ''}">${can > 0 ? 'READY' : 'WAITING'}</span>
+      </div>
+      <div class="fout">Yields ${outs}</div>
+      <div class="fings">${ings}</div>
+      <div class="fcost ${credOk ? '' : 'bad'}">Cost ${fmt(r.cost)} cr per batch · you have ${fmt(P.credits)} cr</div>
+      <div class="fbtns">
+        <button data-act="mfg" data-k="${r.k}" data-n="1" ${can >= 1 ? '' : 'disabled'}>Build ×1</button>
+        <button data-act="mfg" data-k="${r.k}" data-n="5" ${can >= 5 ? '' : 'disabled'}>×5</button>
+        <button data-act="mfg" data-k="${r.k}" data-n="max" ${can >= 1 ? '' : 'disabled'}>Max${can > 1 ? ' (' + can + ')' : ''}</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="fstocks">${stock}</div>${cards}`;
+}
+
+function goodPrice(k) { return Math.round(GOODS[k].base * (1 + (1 - secOf()) * 0.4) * st().priceMul); }
+
+function goodsHTML() {
+  return Object.keys(GOODS).map(k => {
+    const n = P.items[k] || 0, G = GOODS[k], price = goodPrice(k);
+    return `<div class="ore">
+      <div><b style="color:${G.c}">${G.name}</b><div class="dim">${fmt(n)} units · ${price} cr each</div></div>
+      <div class="ovalue">${fmt(n * price)} cr</div>
+      <button data-act="sellgood" data-k="${k}" ${n && nearStation() ? '' : 'disabled'}>Sell all</button></div>`;
+  }).join('');
+}
+
+function sellGood(k, n) {
+  if (!nearStation()) { SND.error(); log('Fly close to a station to sell.'); return; }
+  const have = P.items[k] || 0, q = Math.min(have, n);
+  if (!(q > 0)) return;
+  const gain = Math.round(q * goodPrice(k));
+  if (!Number.isFinite(gain)) return;
+  P.items[k] = have - q;
+  P.credits += gain;
+  SND.coin();
+  log(`Sold ${q} ${GOODS[k].name} for ${fmt(gain)} cr.`);
 }
 
 function repair() {
@@ -2545,7 +2758,8 @@ $('pbody').addEventListener('click', e => {
   else if (a === 'sell10') sellN(b.dataset.k, 10);
   else if (a === 'sellhold') ORE_KEYS.forEach(k => sell(k));
   else if (a === 'buy') buy(b.dataset.k);
-  else if (a === 'mfg') manufacture(b.dataset.k);
+  else if (a === 'mfg') buildRecipe(b.dataset.k, b.dataset.n === 'max' ? Infinity : Number(b.dataset.n) || 1);
+  else if (a === 'sellgood') sellGood(b.dataset.k, Infinity);
   else if (a === 'repair') repair();
   else if (a === 'modbuy') buyMod(b.dataset.k);
   else if (a === 'modrem') remMod(b.dataset.k);
